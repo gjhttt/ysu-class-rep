@@ -20,6 +20,8 @@
 
 `燕大课代表` 基于上游 `ysu-client` 二次开发，沿用已经验证的 Next.js、React、TypeScript、Capacitor 和 YSU Provider 分层。名称、图标、配色和 Android 应用 ID 均独立配置在 [`app.config.json`](app.config.json) 中。
 
+感谢 Youwenqwq 以及 `ysu-client`、`ysu-sdk` 的作者和贡献者所做的探索与开源工作。本项目在前人已验证的认证流程、教务接口和客户端实现基础上进行学习、适配与改进。目前版本仅用于开发者个人学习和日常教务查询，不代表燕山大学官方应用，也不作为公共服务或商业产品运营。
+
 本项目实现了以下功能：
 
 - CAS 登录、图形验证码和 MFA 交互沿用上游实现，不绕过验证。

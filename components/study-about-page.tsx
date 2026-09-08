@@ -138,9 +138,13 @@ export function StudyAboutPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground">
           <p>
+            感谢 Youwenqwq 及 ysu-client、ysu-sdk 的作者与贡献者所做的探索和开源工作。本项目在前人已验证的认证流程、教务接口与客户端实现基础上进行学习、适配和改进。
+          </p>
+          <p>
             本项目按 GPL-3.0
             发布，并保留原项目作者与贡献者的许可证和版权信息。修改或再发布时，不得删除这些信息，并应向接收者提供与所分发版本对应的完整源码及同等许可证权利。
           </p>
+          <p>当前版本仅用于开发者个人学习与日常教务查询，不代表燕山大学官方应用，也不作为公共服务或商业产品运营。</p>
           <a
             href={APP_CONFIG.upstreamUrl}
             target="_blank"
