@@ -27,18 +27,14 @@ import { GpaSummary } from "./gpa-summary"
 import { useCurrentWeek, useGPAStats, useGrades } from "@/providers/hooks"
 import { useProvider } from "@/providers/use-provider"
 import type { Grade, GradeStatistics, GradeDistribution, GradeRanking } from "@/providers/types"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Dices } from "lucide-react"
-import { useSettingsStore } from "@/lib/stores/settings"
-import { useGradeGachaStore, gradeKey, type PendingGrade } from "@/lib/stores/grade-gacha"
-import { GradeGachaModal } from "@/components/grade-gacha"
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import {
+  calculateTermWeightedGpa,
+  numericGradeValue,
+  sortSemestersNewestFirst,
+} from "@/lib/academic/grades"
 
 const ALL_TERM = "__all__"
-
-function numericValue(value: number | undefined, fallback?: string): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  const parsed = Number(fallback)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
 
 export default function GradesPage() {
   const provider = useProvider()
@@ -64,71 +60,12 @@ export default function GradesPage() {
   const grades = useMemo(() => gradesQuery.data ?? [], [gradesQuery.data])
   const loading = gradesQuery.isLoading || gradesQuery.isValidating
 
-  // --- 新成绩抽卡:diff 基线维护 + 未收下前隐藏新成绩 ---
-  const gachaEnabled = useSettingsStore((s) => s.gradeGachaEnabled)
-  const gachaHydrated = useGradeGachaStore((s) => s.hasHydrated)
-  const gachaPending = useGradeGachaStore((s) => s.pending)
-  const [gachaOpen, setGachaOpen] = useState(false)
-
-  useEffect(() => {
-    if (!gachaHydrated || gradesQuery.data === undefined) return
-    const store = useGradeGachaStore.getState()
-    if (!gachaEnabled) {
-      // 开关关闭时静默跟随基线,避免重新打开后一次性涌出全部历史
-      if (store.pending.length === 0) store.setBaseline(gradesQuery.data)
-      return
-    }
-    if (Object.keys(store.seenSignatures).length === 0 && store.pending.length === 0) {
-      store.setBaseline(gradesQuery.data) // 首次运行只建基线
-      return
-    }
-    store.stagePending(gradesQuery.data)
-  }, [gradesQuery.data, gachaHydrated, gachaEnabled])
-
-  useEffect(() => {
-    if (gachaEnabled && gachaPending.length > 0) setGachaOpen(true)
-  }, [gachaEnabled, gachaPending.length])
-
-  const pendingKeys = useMemo(() => new Set(gachaPending.map((p) => p.key)), [gachaPending])
-  // 待抽取期间按旧数据展示:新成绩暂不出现在列表与学期选项中
-  const displayGrades = useMemo(
-    () => (gachaPending.length > 0 ? grades.filter((g) => !pendingKeys.has(gradeKey(g))) : grades),
-    [grades, gachaPending.length, pendingKeys]
-  )
-
-  // --- 玩耍模式:随机抽已有成绩播放动画(不动基线、不隐藏数据) ---
-  const [playItems, setPlayItems] = useState<PendingGrade[] | null>(null)
-  const scoredGrades = useMemo(
-    () => displayGrades.filter((g) => g.score || g.gradeLevel),
-    [displayGrades]
-  )
-
-  function handlePlayDraw() {
-    setFilterDrawerOpen(false)
-    // 1~3 张,张数概率递减
-    const count = 1 + (Math.random() < 0.35 ? 1 : 0) + (Math.random() < 0.15 ? 1 : 0)
-    const pool = [...scoredGrades]
-    const picks: PendingGrade[] = []
-    while (picks.length < count && pool.length > 0) {
-      const [g] = pool.splice(Math.floor(Math.random() * pool.length), 1)
-      picks.push({
-        key: gradeKey(g),
-        courseName: g.courseName,
-        semester: g.semester,
-        score: g.score,
-        numericScore: g.numericScore,
-        gradeLevel: g.gradeLevel,
-        credit: g.credit,
-        isPass: g.isPass,
-      })
-    }
-    if (picks.length > 0) setPlayItems(picks)
-  }
-
   const terms = useMemo(
     () =>
-      Array.from(new Set(displayGrades.map((g) => g.semester).filter(Boolean) as string[])).sort(),
-    [displayGrades]
+      sortSemestersNewestFirst(
+        Array.from(new Set(grades.map((grade) => grade.semester).filter(Boolean) as string[]))
+      ),
+    [grades]
   )
 
   useEffect(() => {
@@ -146,7 +83,7 @@ export default function GradesPage() {
   useEffect(() => {
     if (terms.length > 0 && term === ALL_TERM && !didAutoSelectTerm.current) {
       didAutoSelectTerm.current = true
-      const latest = terms[terms.length - 1]
+      const latest = terms[0]
       if (latest) setTerm(latest)
     }
   }, [terms, term])
@@ -174,11 +111,9 @@ export default function GradesPage() {
 
     setStatsLoading(true)
     try {
-      const [stats, distribution, ranking] = await Promise.all([
-        provider.getGradeStatistics(params).catch(() => null),
-        provider.getGradeDistribution(params).catch(() => null),
-        provider.getGradeRanking(params).catch(() => null),
-      ])
+      const stats = await provider.getGradeStatistics(params).catch(() => null)
+      const distribution = await provider.getGradeDistribution(params).catch(() => null)
+      const ranking = await provider.getGradeRanking(params).catch(() => null)
       setStatsResult(stats)
       setDistributionResult(distribution)
       setRankingResult(ranking)
@@ -243,17 +178,17 @@ export default function GradesPage() {
   )
 
   const filtered = useMemo(() => {
-    return displayGrades.filter((g) => {
+    return grades.filter((g) => {
       if (term !== ALL_TERM && g.semester !== term) return false
       return true
     })
-  }, [displayGrades, term])
+  }, [grades, term])
 
   const sorted = useMemo(() => {
     if (sortMode === "default") return filtered
     return [...filtered].sort((a, b) => {
-      const scoreA = numericValue(a.numericScore, a.score)
-      const scoreB = numericValue(b.numericScore, b.score)
+      const scoreA = numericGradeValue(a.numericScore, a.score)
+      const scoreB = numericGradeValue(b.numericScore, b.score)
       const validA = scoreA !== undefined
       const validB = scoreB !== undefined
       if (!validA && !validB) return 0
@@ -265,23 +200,7 @@ export default function GradesPage() {
 
   const termWeightedGpa = useMemo(() => {
     if (term === ALL_TERM) return null
-    let totalWeightedPoints = 0
-    let totalCredits = 0
-    for (const g of filtered) {
-      // TODO: 此逻辑实际应该由对应 Provider 提供，之后要整合到 ysu provider 里
-      // 仅统计主修培养方案内课程的正考成绩
-      if (!g.isMajor || g.isRetake !== "正考") continue
-      const gp = numericValue(g.numericGradePoint, g.gradePoint)
-      const cr = numericValue(g.numericCredit, g.credit)
-      if (gp !== undefined && cr !== undefined && cr > 0) {
-        // 学位课学分和绩点按 1.2 倍计入
-        const weight = g.isDegreeCourse ? 1.2 : 1
-        totalWeightedPoints += gp * cr * weight
-        totalCredits += cr * weight
-      }
-    }
-    if (totalCredits === 0) return null
-    return (totalWeightedPoints / totalCredits).toFixed(4)
+    return calculateTermWeightedGpa(filtered)
   }, [filtered, term])
 
   if (loading && grades.length === 0) {
@@ -442,17 +361,6 @@ export default function GradesPage() {
         description={t("grades.description")}
       >
         {renderFilterControls("grades-drawer")}
-        {gachaEnabled && scoredGrades.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2 self-center text-muted-foreground"
-            onClick={handlePlayDraw}
-          >
-            <Dices data-icon="inline-start" />
-            {t("gacha.play")}
-          </Button>
-        )}
       </FilterDrawer>
 
       <ResponsiveModal open={statsOpen} onOpenChange={setStatsOpen}>
@@ -575,8 +483,15 @@ export default function GradesPage() {
                 <Separator />
 
                 <section className="flex flex-col gap-2">
-                  <h3 className="text-sm font-semibold">{t("grades.stats.sectionRanking")}</h3>
-                  {rankingResult ? (
+                  <h3 className="text-sm font-semibold">
+                    {statsScope === "class"
+                      ? t("grades.stats.scopeClass")
+                      : t("grades.stats.scopeCourse")}
+                    · {t("grades.stats.sectionRanking")}
+                  </h3>
+                  {rankingResult &&
+                  rankingResult.rank !== undefined &&
+                  rankingResult.total !== undefined ? (
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1 rounded-md border p-2.5">
                         <span className="text-[10px] text-muted-foreground">
@@ -607,13 +522,6 @@ export default function GradesPage() {
           </ResponsiveModalBody>
         </ResponsiveModalContent>
       </ResponsiveModal>
-
-      <GradeGachaModal open={gachaOpen} onClose={() => setGachaOpen(false)} />
-      <GradeGachaModal
-        open={playItems !== null}
-        playItems={playItems ?? []}
-        onClose={() => setPlayItems(null)}
-      />
     </div>
   )
 }

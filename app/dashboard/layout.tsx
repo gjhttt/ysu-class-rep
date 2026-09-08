@@ -35,18 +35,12 @@ import { toast } from "sonner"
 import { logoutActiveProvider, reloginActiveProvider } from "@/providers/provider-service"
 import { checkRateLimit, recordLoginAttempt, rateLimitMessage } from "@/lib/rate-limit"
 import {
-  BookOpen,
   Calendar,
-  CalendarDays,
   ClipboardCheck,
-  FilePenLine,
   FileText,
-  Gauge,
   GraduationCap,
-  Hammer,
   Info,
   LayoutDashboard,
-  Lightbulb,
   LogIn,
   LogOut,
   Settings,
@@ -57,8 +51,6 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { MobileTopBar } from "@/components/mobile-top-bar"
 import { RefreshIndicator } from "@/components/refresh-indicator"
 import { StaleIndicator } from "@/components/stale-indicator"
-import { EXTRA_FEATURES } from "@/lib/extras/registry"
-import { UpdateDialog } from "@/components/update-dialog"
 import { APP_VERSION, APP_BUILD } from "@/lib/version"
 import { useStoredMediaUrl } from "@/lib/storage/media"
 import { loadAvatarImage } from "@/lib/storage/avatar"
@@ -67,6 +59,20 @@ const SIDEBAR_WIDTH_KEY = "dashboard-sidebar-width"
 const DEFAULT_SIDEBAR_WIDTH = 288 // 18rem
 const MIN_SIDEBAR_WIDTH = 208 // 13rem
 const MAX_SIDEBAR_WIDTH = 384 // 24rem
+const READ_ONLY_PATHS = new Set([
+  "/dashboard",
+  "/dashboard/grades",
+  "/dashboard/schedule",
+  "/dashboard/school-schedule",
+  "/dashboard/exams",
+  "/dashboard/evaluation",
+  "/dashboard/me",
+  "/dashboard/me/student",
+  "/dashboard/me/settings",
+  "/dashboard/me/about",
+  "/dashboard/me/avatar",
+  "/dashboard/me/background",
+])
 
 function SidebarResizeHandle() {
   const { state, setOpen, isMobile } = useSidebar()
@@ -172,7 +178,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Ctrl/Cmd+B 折叠/展开侧边栏
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+      if ((e.ctrlKey || e.metaKey) && e.key?.toLowerCase() === "b") {
         if (!window.matchMedia("(min-width: 768px)").matches) return
         e.preventDefault()
         document.querySelector<HTMLElement>("[data-sidebar=trigger]")?.click()
@@ -197,22 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           url: "/dashboard/schedule",
           icon: Calendar,
         },
-      ],
-    },
-    {
-      label: t("me.sectionAcademic"),
-      items: [
         { title: t("app.exams"), url: "/dashboard/exams", icon: FileText },
-        {
-          title: t("app.makeupExams"),
-          url: "/dashboard/makeup-exams",
-          icon: FilePenLine,
-        },
-        {
-          title: t("app.trainingPlan"),
-          url: "/dashboard/training-plan",
-          icon: BookOpen,
-        },
         {
           title: t("app.evaluation"),
           url: "/dashboard/evaluation",
@@ -220,50 +211,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         },
       ],
     },
-    {
-      label: t("me.sectionPlatforms"),
-      items: [
-        { title: t("app.labor"), url: "/dashboard/labor", icon: Hammer },
-        { title: t("app.credits"), url: "/dashboard/credits", icon: Lightbulb },
-        {
-          title: t("app.comprehensive"),
-          url: "/dashboard/comprehensive",
-          icon: Gauge,
-        },
-        {
-          title: t("app.schoolSchedule"),
-          url: "/dashboard/school-schedule",
-          icon: CalendarDays,
-        },
-      ],
-    },
-    // 玩具箱：与教务无关的第三方功能（lib/extras/registry.ts）
-    {
-      label: t("extras.nav"),
-      items: EXTRA_FEATURES.map((f) => ({
-        title: t(f.nav.titleKey),
-        url: f.nav.url,
-        icon: f.nav.icon,
-      })),
-    },
   ]
 
   const titleByPath: Record<string, string> = {
-    ...Object.fromEntries(
-      EXTRA_FEATURES.flatMap((f) =>
-        Object.entries(f.titleKeys).map(([path, key]) => [path, t(key)])
-      )
-    ),
     "/dashboard": t("app.overview"),
     "/dashboard/grades": t("app.grades"),
     "/dashboard/schedule": t("app.schedule"),
-    "/dashboard/exams": t("app.exams"),
-    "/dashboard/makeup-exams": t("app.makeupExams"),
-    "/dashboard/labor": t("app.labor"),
-    "/dashboard/credits": t("app.credits"),
-    "/dashboard/comprehensive": t("app.comprehensive"),
     "/dashboard/school-schedule": t("app.schoolSchedule"),
-    "/dashboard/training-plan": t("app.trainingPlan"),
+    "/dashboard/exams": t("app.exams"),
     "/dashboard/evaluation": t("app.evaluation"),
     "/dashboard/me": t("app.me"),
     "/dashboard/me/student": t("app.studentInfo"),
@@ -278,6 +233,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     "/dashboard",
     "/dashboard/schedule",
     "/dashboard/grades",
+    "/dashboard/exams",
     "/dashboard/me",
   ])
   const showBack = !primaryPaths.has(pathname)
@@ -285,8 +241,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
       router.replace("/login")
+    } else if (hasHydrated && isAuthenticated && !READ_ONLY_PATHS.has(pathname)) {
+      router.replace("/dashboard")
     }
-  }, [hasHydrated, isAuthenticated, router])
+  }, [hasHydrated, isAuthenticated, pathname, router])
 
   async function handleLogout() {
     await logoutActiveProvider()
@@ -341,12 +299,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return null
   }
 
+  if (!READ_ONLY_PATHS.has(pathname)) return null
+
   return (
     <SidebarProvider
       defaultOpen={defaultSidebarOpen}
       style={{ "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
     >
-      <UpdateDialog />
       <Sidebar
         collapsible="icon"
         className={
@@ -359,7 +318,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarResizeHandle />
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-3 transition-all duration-200 ease-linear group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-            <GraduationCap className="size-6 shrink-0 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]" />
+            <img
+              src="/icons/icon-192.webp"
+              alt=""
+              className="size-7 shrink-0 rounded-lg object-cover shadow-sm"
+            />
             <span className="font-semibold group-data-[collapsible=icon]:hidden">
               {t("app.name")}
             </span>
@@ -423,7 +386,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </SidebarFooter>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden pt-[calc(3rem+var(--safe-area-inset-top,env(safe-area-inset-top,0px)))] pb-[calc(4rem+var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)))] md:overflow-auto md:pt-[var(--safe-area-inset-top,env(safe-area-inset-top))] md:pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom))]">
+      <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden pt-[calc(3.25rem+var(--safe-area-inset-top,env(safe-area-inset-top,0px)))] pb-[calc(4rem+var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)))] md:overflow-auto md:pt-[var(--safe-area-inset-top,env(safe-area-inset-top))] md:pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom))]">
         <MobileTopBar title={pageTitle} showBack={showBack} />
         {sessionExpired && (
           <Alert variant="destructive" className="mx-4 mt-4 md:mx-6 md:mt-6">

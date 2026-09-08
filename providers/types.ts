@@ -256,9 +256,9 @@ export interface GradeRanking {
   studentId?: string
   classId?: string
   courseCode?: string
-  score: number
-  rank: number
-  total: number
+  score?: number
+  rank?: number
+  total?: number
   rankingType?: string
   metadata?: Record<string, unknown>
 }

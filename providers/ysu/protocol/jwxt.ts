@@ -2202,7 +2202,7 @@ export async function submitEvaluation(
 
 // ─── Parsers ──────────────────────────────────────────────────────────── //
 
-function parseGrade(raw: Record<string, unknown>): Grade {
+export function parseGrade(raw: Record<string, unknown>): Grade {
   const zcj = raw["ZCJ"]
   const score = zcj !== undefined && zcj !== null ? String(zcj) : rawStr(raw, "XSZCJMC")
 
@@ -2236,7 +2236,7 @@ function parseGrade(raw: Record<string, unknown>): Grade {
   }
 }
 
-function parseGpaStats(raw: Record<string, unknown>): GPAStats {
+export function parseGpaStats(raw: Record<string, unknown>): GPAStats {
   return {
     planName: rawStr(raw, "PYFAMC"),
     studyType: rawStr(raw, "FAXDLX_DISPLAY"),
@@ -2268,7 +2268,7 @@ function parseGpaStats(raw: Record<string, unknown>): GPAStats {
   }
 }
 
-function parseGradeStatistics(raw: Record<string, unknown>): GradeStatistics {
+export function parseGradeStatistics(raw: Record<string, unknown>): GradeStatistics {
   return {
     scope: TJLX_TO_SCOPE[String(raw["TJLX"] ?? "")] ?? "",
     term: rawStr(raw, "XNXQDM"),
@@ -2281,7 +2281,7 @@ function parseGradeStatistics(raw: Record<string, unknown>): GradeStatistics {
   }
 }
 
-function parseGradeDistribution(raw: Record<string, unknown>): GradeDistribution {
+export function parseGradeDistribution(raw: Record<string, unknown>): GradeDistribution {
   return {
     scope: TJLX_TO_SCOPE[String(raw["TJLX"] ?? "")] ?? "",
     term: rawStr(raw, "XNXQDM"),
@@ -2294,7 +2294,7 @@ function parseGradeDistribution(raw: Record<string, unknown>): GradeDistribution
   }
 }
 
-function parseGradeRanking(raw: Record<string, unknown>): GradeRanking {
+export function parseGradeRanking(raw: Record<string, unknown>): GradeRanking {
   return {
     scope: TJLX_TO_SCOPE[String(raw["TJLX"] ?? "")] ?? "",
     term: rawStr(raw, "XNXQDM"),

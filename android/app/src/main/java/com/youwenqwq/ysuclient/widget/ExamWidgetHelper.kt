@@ -103,7 +103,7 @@ class ExamWidgetHelper(private val context: Context) {
 
         // Click to open exams page
         val clickPendingIntent = WidgetConfig.createDeepLinkPendingIntent(
-            context, appWidgetId, "ysuclient://exams"
+            context, appWidgetId, "${context.getString(R.string.custom_url_scheme)}://exams"
         )
         views.setOnClickPendingIntent(R.id.exam_widget_container, clickPendingIntent)
 
@@ -168,7 +168,7 @@ class ExamWidgetHelper(private val context: Context) {
 
         // Click to open exams page
         val clickPendingIntent = WidgetConfig.createDeepLinkPendingIntent(
-            context, appWidgetId, "ysuclient://exams"
+            context, appWidgetId, "${context.getString(R.string.custom_url_scheme)}://exams"
         )
         views.setOnClickPendingIntent(R.id.exam_widget_container, clickPendingIntent)
 

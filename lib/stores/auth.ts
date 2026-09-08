@@ -8,6 +8,7 @@ interface AuthState {
   jwxtSession: string | null
   mobileSession: string | null
   username: string | null
+  cacheNamespace: string | null
   isAuthenticated: boolean
   sessionExpired: boolean
   hasHydrated: boolean
@@ -19,6 +20,11 @@ interface AuthState {
   setHasHydrated: (v: boolean) => void
 }
 
+function createCacheNamespace(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -26,17 +32,25 @@ export const useAuthStore = create<AuthState>()(
       jwxtSession: null,
       mobileSession: null,
       username: null,
+      cacheNamespace: null,
       isAuthenticated: false,
       sessionExpired: false,
       hasHydrated: false,
       setCredential: (credential, username) =>
-        set({
-          credential,
-          username,
-          isAuthenticated: true,
-          sessionExpired: false,
-          jwxtSession: null,
-          mobileSession: null,
+        set((state) => {
+          const nextUsername = username ?? state.username
+          return {
+            credential,
+            username: nextUsername,
+            cacheNamespace:
+              nextUsername && nextUsername === state.username && state.cacheNamespace
+                ? state.cacheNamespace
+                : createCacheNamespace(),
+            isAuthenticated: true,
+            sessionExpired: false,
+            jwxtSession: null,
+            mobileSession: null,
+          }
         }),
       setJWXTSession: (jwxtSession) => set({ jwxtSession }),
       setMobileSession: (mobileSession) => set({ mobileSession }),
@@ -47,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
           jwxtSession: null,
           mobileSession: null,
           username: null,
+          cacheNamespace: null,
           isAuthenticated: false,
           sessionExpired: false,
         }),

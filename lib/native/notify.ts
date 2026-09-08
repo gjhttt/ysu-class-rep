@@ -168,11 +168,13 @@ export async function stopNativePolling(): Promise<void> {
 /**
  * 停止所有通知服务。登出时调用。
  */
-export function stopNotify(): void {
+export async function stopNotify(): Promise<void> {
   if (isCapacitor()) {
-    NotifyPlugin.stopPolling().catch(() => {})
-    NotifyPlugin.clearCastgc().catch(() => {})
-    NotifyPlugin.cancelClassAlarms().catch(() => {})
+    await Promise.allSettled([
+      NotifyPlugin.stopPolling(),
+      NotifyPlugin.clearCastgc(),
+      NotifyPlugin.cancelClassAlarms(),
+    ])
   }
 }
 

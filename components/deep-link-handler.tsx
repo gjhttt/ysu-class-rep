@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { isCapacitor } from "@/lib/native/platform"
+import { APP_CONFIG } from "@/lib/app-config"
 
 export function DeepLinkHandler() {
   const router = useRouter()
@@ -15,7 +16,7 @@ export function DeepLinkHandler() {
     function handleUrl(url: string) {
       try {
         const parsed = new URL(url)
-        if (parsed.protocol === "ysuclient:") {
+        if (parsed.protocol === `${APP_CONFIG.scheme}:`) {
           if (parsed.host === "schedule") {
             router.push("/dashboard/schedule")
           } else if (parsed.host === "exams") {

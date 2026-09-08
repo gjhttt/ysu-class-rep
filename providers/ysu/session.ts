@@ -158,9 +158,9 @@ export async function resetSession(): Promise<void> {
       clearAllCache()
       useRefreshStore.setState({ count: 0, stale: 0 })
       // Stop all notification services on logout
-      stopNotify()
-      // Clear account-specific data kept by home-screen widgets.
-      void clearWidgetDataFromNative()
+      await stopNotify()
+      // Clear all account-specific data kept by native widgets/background helpers.
+      await clearWidgetDataFromNative()
       await removeCASTGC().catch(() => {})
     }
   })

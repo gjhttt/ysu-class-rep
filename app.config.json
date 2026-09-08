@@ -1,0 +1,11 @@
+{
+  "appName": "燕大课代表",
+  "shortName": "课代表",
+  "englishName": "YSU Class Rep",
+  "androidPackage": "com.example.ysustudy",
+  "scheme": "ysustudy",
+  "storagePrefix": "ysu-study",
+  "version": "0.1.0",
+  "repositoryUrl": "",
+  "upstreamUrl": "https://github.com/Youwenqwq/ysu-client"
+}

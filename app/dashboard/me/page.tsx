@@ -9,16 +9,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  BookOpen,
-  CalendarDays,
-  ChevronRight,
+  Calendar,
   ClipboardCheck,
-  FilePenLine,
+  ChevronRight,
   FileText,
-  Gauge,
-  Hammer,
-  Lightbulb,
+  GraduationCap,
   LogIn,
+  LogOut,
   Settings,
   Sun,
   Moon,
@@ -35,7 +32,6 @@ import { useStudentInfo } from "@/providers/hooks"
 import { checkRateLimit, recordLoginAttempt, rateLimitMessage } from "@/lib/rate-limit"
 import { useTheme } from "next-themes"
 import { APP_VERSION, APP_BUILD } from "@/lib/version"
-import { EXTRA_FEATURES } from "@/lib/extras/registry"
 
 export default function MePage() {
   const router = useRouter()
@@ -53,11 +49,7 @@ export default function MePage() {
   const effectiveTheme = isSystem ? systemTheme : theme
 
   function handleThemeToggle() {
-    if (isSystem) {
-      setTheme("light")
-    } else {
-      setTheme(theme === "light" ? "dark" : "light")
-    }
+    setTheme(effectiveTheme === "dark" ? "light" : "dark")
   }
 
   useMobileHeaderRight(
@@ -66,7 +58,7 @@ export default function MePage() {
         variant="ghost"
         size="icon-sm"
         onClick={handleThemeToggle}
-        aria-label={t("app.theme")}
+        aria-label={effectiveTheme === "dark" ? t("app.themeLight") : t("app.themeDark")}
       >
         {effectiveTheme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
       </Button>
@@ -102,6 +94,12 @@ export default function MePage() {
     router.replace("/login")
   }
 
+  async function handleLogout() {
+    await logoutActiveProvider()
+    toast.success("已退出登录并清除本地凭据与缓存")
+    router.replace("/login")
+  }
+
   const avatarImage = useSettingsStore((s) => s.avatarImage)
   const avatarUrl = useStoredMediaUrl(avatarImage, loadAvatarImage)
 
@@ -109,45 +107,11 @@ export default function MePage() {
   const initials = (student.data?.name || username || "U").slice(-2)
 
   const academicItems = [
+    { href: "/dashboard/schedule", label: t("app.schedule"), icon: Calendar },
+    { href: "/dashboard/grades", label: t("app.grades"), icon: GraduationCap },
     { href: "/dashboard/exams", label: t("app.exams"), icon: FileText },
-    {
-      href: "/dashboard/makeup-exams",
-      label: t("app.makeupExams"),
-      icon: FilePenLine,
-    },
-    {
-      href: "/dashboard/training-plan",
-      label: t("app.trainingPlan"),
-      icon: BookOpen,
-    },
-    {
-      href: "/dashboard/evaluation",
-      label: t("app.evaluation"),
-      icon: ClipboardCheck,
-    },
+    { href: "/dashboard/evaluation", label: t("app.evaluation"), icon: ClipboardCheck },
   ]
-
-  const platformItems = [
-    { href: "/dashboard/labor", label: t("app.labor"), icon: Hammer },
-    { href: "/dashboard/credits", label: t("app.credits"), icon: Lightbulb },
-    {
-      href: "/dashboard/comprehensive",
-      label: t("app.comprehensive"),
-      icon: Gauge,
-    },
-    {
-      href: "/dashboard/school-schedule",
-      label: t("app.schoolSchedule"),
-      icon: CalendarDays,
-    },
-  ]
-
-  // 玩具箱入口（移动端经"我的"页进入；桌面端走侧边栏）
-  const extraItems = EXTRA_FEATURES.map((f) => ({
-    href: f.nav.url,
-    label: t(f.nav.titleKey),
-    icon: f.nav.icon,
-  }))
 
   return (
     <div className="flex flex-col gap-4">
@@ -194,16 +158,6 @@ export default function MePage() {
         <LinkCard items={academicItems} />
       </Section>
 
-      <Section title={t("me.sectionPlatforms")}>
-        <LinkCard items={platformItems} />
-      </Section>
-
-      {extraItems.length > 0 && (
-        <Section title={t("extras.nav")}>
-          <LinkCard items={extraItems} />
-        </Section>
-      )}
-
       <Section title={t("me.sectionPreferences")}>
         <LinkCard
           items={[
@@ -226,6 +180,15 @@ export default function MePage() {
             >
               <LogIn className="size-5 shrink-0 text-muted-foreground" />
               <span className="flex-1 text-left text-sm">{t("app.relogin")}</span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-3 border-t border-border py-3 transition-colors active:bg-muted/60"
+            >
+              <LogOut className="size-5 shrink-0 text-destructive" />
+              <span className="flex-1 text-left text-sm text-destructive">{t("app.logout")}</span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
             </button>
           </CardContent>

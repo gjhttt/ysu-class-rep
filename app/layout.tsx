@@ -6,17 +6,14 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
 import { I18nProvider } from "@/lib/i18n/context"
-import { SDKProvider } from "@/components/sdk-provider"
-import { ActivationGate } from "@/components/activation-gate"
+import { StudySDKProvider } from "@/components/study-sdk-provider"
 import { MFAModal } from "@/components/mfa-modal"
 import { BackgroundImage } from "@/components/background-image"
 import { BackButtonHandler } from "@/components/back-button-handler"
 import { DeepLinkHandler } from "@/components/deep-link-handler"
-import { NotifyProvider } from "@/components/notify-provider"
-import { PwaRegister } from "@/components/pwa-register"
-import { PwaUpdatePrompt } from "@/components/pwa-update-prompt"
 import { ProviderProvider } from "@/providers/provider-context"
 import { cn } from "@/lib/utils"
+import { APP_CONFIG } from "@/lib/app-config"
 
 const geist = Geist({
   subsets: ["latin"],
@@ -32,17 +29,16 @@ const fontMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "燕大终端",
-    template: "%s · 燕大终端",
+    default: APP_CONFIG.appName,
+    template: `%s · ${APP_CONFIG.appName}`,
   },
-  description:
-    "YSU Terminal — a third-party shadcn/ui client for the Yanshan University academic system.",
-  applicationName: "燕大终端",
+  description: "面向燕山大学学生的非官方教务查询客户端。",
+  applicationName: APP_CONFIG.appName,
   authors: [{ name: "ysu-client contributors" }],
-  keywords: ["燕大终端", "YSU Terminal", "燕山大学", "YSU", "教务系统"],
+  keywords: [APP_CONFIG.appName, APP_CONFIG.englishName, "燕山大学", "YSU", "教务系统"],
   appleWebApp: {
     capable: true,
-    title: "燕大终端",
+    title: APP_CONFIG.appName,
     statusBarStyle: "default",
   },
 }
@@ -68,23 +64,18 @@ export default function RootLayout({
     >
       <body>
         <I18nProvider>
-          <PwaRegister />
-          <PwaUpdatePrompt />
           <ThemeProvider>
             <ProviderProvider>
-              <ActivationGate>
-                <SDKProvider>
-                  <TooltipProvider>
-                    <BackgroundImage />
-                    <BackButtonHandler />
-                    <DeepLinkHandler />
-                    <NotifyProvider />
-                    {children}
-                    <Toaster />
-                    <MFAModal />
-                  </TooltipProvider>
-                </SDKProvider>
-              </ActivationGate>
+              <StudySDKProvider>
+                <TooltipProvider>
+                  <BackgroundImage />
+                  <BackButtonHandler />
+                  <DeepLinkHandler />
+                  {children}
+                  <Toaster />
+                  <MFAModal />
+                </TooltipProvider>
+              </StudySDKProvider>
             </ProviderProvider>
           </ThemeProvider>
         </I18nProvider>

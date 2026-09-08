@@ -3,11 +3,14 @@ import type { SchoolConfig } from "@/lib/school-configs/types"
 import { ProviderError, ProviderErrorCode } from "./errors"
 import type { AcademicProvider } from "./types"
 import { YSUProvider } from "./ysu"
+import { MockYSUProvider } from "@/providers/mock/runtime"
+import { IS_MOCK_MODE } from "@/lib/app-config"
+import { isCapacitor } from "@/lib/native/platform"
 
 export type ProviderFactory = () => AcademicProvider
 
 const registry: Record<string, ProviderFactory> = {
-  ysu: () => new YSUProvider(),
+  ysu: () => (IS_MOCK_MODE && !isCapacitor() ? new MockYSUProvider() : new YSUProvider()),
 }
 
 export interface SchoolRegistration {

@@ -6,6 +6,10 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
+const mockProviderModule =
+  process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
+    ? './providers/mock/runtime.ts'
+    : './providers/mock/production.ts';
 
 let gitHash = 'unknown';
 try {
@@ -24,6 +28,11 @@ const nextConfig = {
   basePath: process.env.APP_BASE_PATH || '',
   images: {
     unoptimized: true,
+  },
+  turbopack: {
+    resolveAlias: {
+      '@/providers/mock/runtime': mockProviderModule,
+    },
   },
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,

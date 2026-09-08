@@ -54,8 +54,19 @@ pnpm-debug.log*
 
 # env files
 .env
-.env*.local
+.env.*
+!.env.example
 *.pem
+*.key
+*.p12
+*.pfx
+*.har
+*.pcap
+*.pcapng
+*cookies*.json
+*credentials*.json
+/fixtures/private/
+/test-data/private/
 
 # typescript
 *.tsbuildinfo
@@ -72,6 +83,7 @@ skills-lock.json
 *.keystore
 *.jks
 /gradle.properties
+/.phone-inspect/
 
 # Website build artifacts
 website/node_modules/

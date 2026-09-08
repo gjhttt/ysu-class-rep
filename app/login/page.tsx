@@ -31,6 +31,8 @@ import { checkRateLimit, rateLimitMessage } from "@/lib/rate-limit"
 import { isCapacitor } from "@/lib/native/platform"
 import { useMFAModalStore } from "@/lib/stores/mfa-modal"
 import { getActiveProvider, setActiveProviderSchool } from "@/providers/provider-service"
+import { Eye, EyeOff } from "lucide-react"
+import { IS_MOCK_MODE } from "@/lib/app-config"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,19 +44,21 @@ export default function LoginPage() {
   const [selectedSchool, setSelectedSchool] = useState(getSchoolId())
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(false)
   const [captcha, setCaptcha] = useState("")
   const [captchaUrl, setCaptchaUrl] = useState<string | null>(null)
   const [needsCaptcha, setNeedsCaptcha] = useState(false)
   const [loading, setLoading] = useState(false)
   const [countdown, setCountdown] = useState(0)
+  const mockMode = IS_MOCK_MODE && !isCapacitor()
 
   // Web 端 secure-storage 退化为明文 localStorage，刻意不提供"记住密码"，
   // 避免账号密码明文落盘；会话 cookie 的持久化与教务系统本身的安全模型一致。
-  const canRemember = isCapacitor()
+  const canRemember = isCapacitor() && !mockMode
 
   useEffect(() => {
-    if (!isCapacitor()) return
+    if (!canRemember) return
     loadRememberedCredentials().then((r) => {
       if (r) {
         setUsername(r.username)
@@ -62,7 +66,7 @@ export default function LoginPage() {
         setRemember(true)
       }
     })
-  }, [])
+  }, [canRemember])
 
   useEffect(() => {
     if (countdown <= 0) return
@@ -92,7 +96,7 @@ export default function LoginPage() {
   }
 
   async function syncRememberedLoginPreference() {
-    if (!isCapacitor()) return
+    if (!canRemember) return
     if (remember) {
       await saveRememberedCredentials(username, password)
     } else {
@@ -229,6 +233,11 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>{t("login.title")}</CardTitle>
           <CardDescription>{t("login.usernamePlaceholder")}</CardDescription>
+          {mockMode && (
+            <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-primary">
+              {t("login.mockNotice")}
+            </p>
+          )}
           {schools.length > 1 && (
             <div className="pt-2">
               <Select value={selectedSchool} onValueChange={handleSchoolChange}>
@@ -262,14 +271,25 @@ export default function LoginPage() {
               </Field>
               <Field>
                 <FieldLabel htmlFor="password">{t("login.passwordLabel")}</FieldLabel>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t("login.passwordPlaceholder")}
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    className="pr-10"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t("login.passwordPlaceholder")}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="absolute inset-y-0 right-0 flex min-h-10 min-w-10 items-center justify-center text-muted-foreground"
+                    aria-label={t(showPassword ? "login.hidePassword" : "login.showPassword")}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </Field>
               {needsCaptcha && captchaUrl && (
                 <Field>
@@ -311,6 +331,9 @@ export default function LoginPage() {
               </Button>
             </FieldGroup>
           </form>
+          <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
+            {t("login.privacyNotice")}
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -21,7 +21,7 @@ export function MobileTopBar({ title, showBack }: Props) {
   return (
     <header
       className={cn(
-        "fixed top-0 z-30 flex h-[calc(3rem+var(--safe-area-inset-top,env(safe-area-inset-top,0px)))] w-full items-center justify-between gap-3 px-4 pt-[var(--safe-area-inset-top,env(safe-area-inset-top,0px))] backdrop-blur md:hidden",
+        "fixed top-0 z-30 flex h-[calc(3.25rem+var(--safe-area-inset-top,env(safe-area-inset-top,0px)))] w-full items-center justify-between gap-3 border-b border-border/70 px-4 pt-[var(--safe-area-inset-top,env(safe-area-inset-top,0px))] backdrop-blur md:hidden",
         hasBackground
           ? "bg-background/60 supports-[backdrop-filter]:bg-background/40"
           : "bg-background/95 supports-[backdrop-filter]:bg-background/80"
@@ -38,7 +38,7 @@ export function MobileTopBar({ title, showBack }: Props) {
             <ArrowLeft className="size-5" />
           </button>
         )}
-        <h1 className="truncate text-base font-semibold">{title}</h1>
+        <h1 className="truncate text-[0.95rem] font-semibold tracking-tight">{title}</h1>
         <RefreshIndicator />
         <StaleIndicator />
       </div>

@@ -201,6 +201,28 @@ export function isCourseActiveInWeek(course: ScheduleCourse, week: number): bool
   return weeks.includes(week)
 }
 
+export function lastScheduledWeek(courses: readonly ScheduleCourse[]): number {
+  return courses.reduce((latest, course) => {
+    const weeks = course.weekList ?? parseWeeks(course.weeks || "")
+    return Math.max(latest, ...weeks)
+  }, 0)
+}
+
+export function findCourseAtSlot(
+  courses: readonly ScheduleCourse[],
+  week: number,
+  day: number,
+  section: number
+): ScheduleCourse | undefined {
+  return courses.find(
+    (course) =>
+      courseWeekDay(course) === day &&
+      courseStartSection(course) <= section &&
+      courseEndSection(course) >= section &&
+      isCourseActiveInWeek(course, week)
+  )
+}
+
 export function coursesSignature(courses: ScheduleCourse[]): string {
   return courses
     .map(

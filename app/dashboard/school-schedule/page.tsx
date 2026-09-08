@@ -26,9 +26,7 @@ import {
   useErrorToast,
   ValidatingList,
 } from "@/components/academic/list-state"
-import { FilterDrawer, FilterTrigger } from "@/components/academic/filter-drawer"
 import { useTranslation } from "@/lib/i18n/use-translation"
-import { useMobileHeaderRight } from "@/lib/stores/mobile-header"
 import { ResponsiveSelect } from "@/components/responsive-select"
 import { cn } from "@/lib/utils"
 import {
@@ -51,6 +49,7 @@ import { buildCourseColorMap } from "../schedule/course-color"
 import { ScheduleMobile } from "../schedule/schedule-mobile"
 import { ScheduleTablet } from "../schedule/schedule-tablet"
 import {
+  findCourseAtSlot,
   isCourseActiveInWeek,
   periodIsInUse,
   resolveInitialScheduleWeek,
@@ -276,17 +275,45 @@ function ClassScheduleLoader({
 function RoomScheduleLoader({
   code,
   name,
+  freeRoomContext,
   onBack,
 }: {
   code: string
   name: string
+  freeRoomContext?: FreeRoomContext | null
   onBack: () => void
 }) {
+  const { t } = useTranslation()
   const query = useSchoolClassroomSchedule(code)
   useErrorToast(query.error)
+  const occupiedCourse =
+    freeRoomContext && query.data
+      ? findCourseAtSlot(
+          query.data,
+          freeRoomContext.week,
+          freeRoomContext.day,
+          freeRoomContext.section
+        )
+      : undefined
+  const availability =
+    freeRoomContext && query.data
+      ? occupiedCourse
+        ? t("schoolSchedule.roomOccupied", {
+            week: freeRoomContext.week,
+            weekday: t(`dashboard.weekdayNames.${freeRoomContext.day}`),
+            section: freeRoomContext.section,
+            course: occupiedCourse.name,
+          })
+        : t("schoolSchedule.roomAvailable", {
+            week: freeRoomContext.week,
+            weekday: t(`dashboard.weekdayNames.${freeRoomContext.day}`),
+            section: freeRoomContext.section,
+          })
+      : undefined
   return (
     <CourseScheduleView
       title={name}
+      subtitle={availability}
       courses={query.data ?? []}
       isLoading={query.isLoading}
       onBack={onBack}
@@ -368,8 +395,6 @@ function ClassSchedulePanel() {
     classId: string
     className: string
   } | null>(null)
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
-
   const gradeYearsQuery = useSchoolGradeYears()
   const departmentsQuery = useSchoolDepartments()
   const majorsQuery = useSchoolMajors(department === ALL ? undefined : department)
@@ -381,30 +406,11 @@ function ClassSchedulePanel() {
   useErrorToast(gradeYearsQuery.error ?? departmentsQuery.error ?? majorsQuery.error)
 
   const hasFilter = grade !== ALL || department !== ALL || major !== ALL
-  const summary = [
-    gradeYears.find((g) => g.id === grade)?.name,
-    departments.find((d) => d.id === department)?.name,
-    majors.find((m) => m.id === major)?.name,
-  ]
-    .filter(Boolean)
-    .join(" · ")
-
-  useMobileHeaderRight(
-    selectedClass ? null : (
-      <FilterTrigger
-        label={summary || t("schoolSchedule.selectHint")}
-        onClick={() => setFilterDrawerOpen(true)}
-      />
-    ),
-    [selectedClass, summary, t]
-  )
-
   const filterControls = (
     <FieldGroup className="flex flex-col gap-3 md:flex-row">
       <Field className="flex-1">
         <FieldLabel>{t("schoolSchedule.grade")}</FieldLabel>
         <ResponsiveSelect
-          nested
           value={grade}
           onValueChange={setGrade}
           title={t("schoolSchedule.grade")}
@@ -417,7 +423,6 @@ function ClassSchedulePanel() {
       <Field className="flex-1">
         <FieldLabel>{t("schoolSchedule.department")}</FieldLabel>
         <ResponsiveSelect
-          nested
           value={department}
           onValueChange={(v) => {
             setDepartment(v)
@@ -433,7 +438,6 @@ function ClassSchedulePanel() {
       <Field className="flex-1">
         <FieldLabel>{t("schoolSchedule.major")}</FieldLabel>
         <ResponsiveSelect
-          nested
           value={major}
           onValueChange={setMajor}
           title={t("schoolSchedule.major")}
@@ -458,14 +462,7 @@ function ClassSchedulePanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="hidden md:block">{filterControls}</div>
-      <FilterDrawer
-        open={filterDrawerOpen}
-        onOpenChange={setFilterDrawerOpen}
-        title={t("schoolSchedule.classTab")}
-      >
-        {filterControls}
-      </FilterDrawer>
+      <div className="rounded-xl border bg-card p-3">{filterControls}</div>
 
       {!hasFilter ? (
         <EmptyState title={t("schoolSchedule.selectHint")} />
@@ -556,8 +553,6 @@ function RoomSchedulePanel({ freeRoomContext }: { freeRoomContext?: FreeRoomCont
     code: string
     name: string
   } | null>(null)
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
-
   const campusesQuery = useSchoolCampuses()
   const buildingsQuery = useSchoolBuildings(campus === ALL ? undefined : campus)
 
@@ -567,27 +562,8 @@ function RoomSchedulePanel({ freeRoomContext }: { freeRoomContext?: FreeRoomCont
   useErrorToast(campusesQuery.error ?? buildingsQuery.error)
 
   const hasFilter = searchedName !== "" || campus !== ALL || building !== ALL
-  const summary = [
-    campuses.find((c) => c.id === campus)?.name,
-    buildings.find((b) => b.id === building)?.name,
-    searchedName || null,
-  ]
-    .filter(Boolean)
-    .join(" · ")
-
-  useMobileHeaderRight(
-    selectedRoom ? null : (
-      <FilterTrigger
-        label={summary || t("schoolSchedule.selectHint")}
-        onClick={() => setFilterDrawerOpen(true)}
-      />
-    ),
-    [selectedRoom, summary, t]
-  )
-
   function handleSearch() {
     setSearchedName(name.trim())
-    setFilterDrawerOpen(false)
   }
 
   const renderFilterControls = (idPrefix: string) => (
@@ -596,7 +572,6 @@ function RoomSchedulePanel({ freeRoomContext }: { freeRoomContext?: FreeRoomCont
         <Field className="flex-1">
           <FieldLabel>{t("schoolSchedule.campus")}</FieldLabel>
           <ResponsiveSelect
-            nested
             value={campus}
             onValueChange={(v) => {
               setCampus(v)
@@ -612,7 +587,6 @@ function RoomSchedulePanel({ freeRoomContext }: { freeRoomContext?: FreeRoomCont
         <Field className="flex-1">
           <FieldLabel>{t("schoolSchedule.building")}</FieldLabel>
           <ResponsiveSelect
-            nested
             value={building}
             onValueChange={setBuilding}
             title={t("schoolSchedule.building")}
@@ -649,6 +623,7 @@ function RoomSchedulePanel({ freeRoomContext }: { freeRoomContext?: FreeRoomCont
       <RoomScheduleLoader
         code={selectedRoom.code}
         name={selectedRoom.name}
+        freeRoomContext={freeRoomContext}
         onBack={() => setSelectedRoom(null)}
       />
     )
@@ -668,14 +643,7 @@ function RoomSchedulePanel({ freeRoomContext }: { freeRoomContext?: FreeRoomCont
           </span>
         </div>
       )}
-      <div className="hidden md:block">{renderFilterControls("room-desktop")}</div>
-      <FilterDrawer
-        open={filterDrawerOpen}
-        onOpenChange={setFilterDrawerOpen}
-        title={t("schoolSchedule.roomTab")}
-      >
-        {renderFilterControls("room-drawer")}
-      </FilterDrawer>
+      <div className="rounded-xl border bg-card p-3">{renderFilterControls("room-inline")}</div>
 
       {!hasFilter ? (
         <EmptyState title={t("schoolSchedule.selectHint")} />
@@ -700,7 +668,7 @@ export default function SchoolSchedulePage() {
   const [tab, setTab] = useState<"class" | "room">("class")
   const [freeRoomContext, setFreeRoomContext] = useState<FreeRoomContext | null>(null)
 
-  // 深链情境：日程页“查空教室”带周次/星期/节次跳入。静态导出下
+  // 深链情境：日程页“检查教室空闲”带周次/星期/节次跳入。静态导出下
   // useSearchParams 初次水合可能为空，改为挂载后读一次 location.search。
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)

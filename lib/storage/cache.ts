@@ -42,14 +42,26 @@ export function cacheKey(parts: string[]): string {
   return parts.map(hashPart).join("|")
 }
 
+/** Remove protocol-only server fields before writing display data to localStorage. */
+export function stripCacheMetadata<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(stripCacheMetadata) as T
+  if (value === null || typeof value !== "object") return value
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== "raw" && key !== "metadata")
+      .map(([key, child]) => [key, stripCacheMetadata(child)])
+  ) as T
+}
+
 /**
  * 读取缓存数据（即使已过期）。
- * 返回 `{ data, stale }` —— stale 为 true 表示数据已过期但可用作占位。
+ * 返回数据、过期标记和写入时间；过期数据仍可用于快速占位。
  */
 export function cacheGetStale<T>(
   key: string,
   ttl = DEFAULT_TTL_MS
-): { data: T; stale: boolean } | null {
+): { data: T; stale: boolean; updatedAt: number } | null {
   const currentKey = `${CACHE_PREFIX}${key}`
   const legacyKey = `${LEGACY_CACHE_PREFIX}${key}`
   try {
@@ -66,7 +78,7 @@ export function cacheGetStale<T>(
       localStorage.removeItem(legacyKey)
     }
     const stale = Date.now() - entry.ts > ttl
-    return { data: entry.data, stale }
+    return { data: entry.data, stale, updatedAt: entry.ts }
   } catch {
     return null
   }

@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## YSU Study fork overrides
+
+- App identity comes from `app.config.json`; do not hard-code a new app name, scheme, or Android application ID elsewhere.
+- Real university requests are Android-only and direct via Capacitor HTTP. Browser development must use `NEXT_PUBLIC_MOCK_MODE=true`; never restore a credential/cookie proxy.
+- Version 1 is read-only except for user-confirmed, manual, single-task teaching evaluation. Do not expose automatic answer filling, batch evaluation, makeup signup, completion recalculation, mobile sign-in, or other mutations. Evaluation submission must require server-side preview and a final confirmation because it cannot be undone.
+- Do not add analytics, feedback upload, remote activation, or any service that receives student data. Online announcements and update checks may only read public static metadata and release artifacts from this project's own GitHub repository; they must never include credentials or academic data.
+- The rules above override conflicting upstream descriptions below. Preserve upstream GPL-3.0 license and attribution.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -51,9 +59,10 @@ The app talks to two separate domains that share SSO via CAS:
 
 1. **CAS** (`cer.ysu.edu.cn`) — unified identity gateway
 2. **JWXT** (`jwxt.ysu.edu.cn`) — academic affairs system (EMAP platform)
-Both use module-level `SimpleCookieJar` instances (`casJar`, `jwxtJar`). Cookie state must survive app restarts.
+   Both use module-level `SimpleCookieJar` instances (`casJar`, `jwxtJar`). Cookie state must survive app restarts.
 
 **On native (Capacitor)**:
+
 - `CapacitorHttp` uses `HttpURLConnection` underneath, which has its own `java.net.CookieManager` (the "native cookie store")
 - `capacitorHttpSend()` in `lib/cookie.ts` pushes jar cookies into the native store via `CapacitorCookies.setCookie()` before each request
 - The native store is a **transport layer only**; the JS jar remains the source of truth
@@ -62,13 +71,14 @@ Both use module-level `SimpleCookieJar` instances (`casJar`, `jwxtJar`). Cookie 
 - Response headers are normalized to lowercase because CapacitorHttp preserves original casing (`Set-Cookie` vs `set-cookie`)
 
 **Session persistence chain**:
+
 1. Login success → `saveCASTGC()` stores CASTGC value → `secureStorage`
 2. `initializeActiveProvider()` (called after Zustand hydration) restores CASTGC into native store + restores CAS/JWXT/mobile sessions into their jars
 3. After successful provider calls, `persistJWXTSession()` / `persistMobileSession()` serialize jars back to auth-store
 4. Logout → active provider `reset()` / `logout()` clears jars, auth-store state, caches, and native notification state
 
-
 **Expired-login model**:
+
 - `lib/stores/auth.ts` intentionally distinguishes `isAuthenticated` from `sessionExpired`.
 - Expired CAS/JWXT sessions should keep `isAuthenticated=true` so cached dashboard data remains readable, while `sessionExpired=true` drives the visible warning UI.
 - `providers/hooks/use-provider-query.ts` is the central cached data path. On `AUTH_SESSION_EXPIRED`, it may return cached data and set `authExpired=true` / auth-store `sessionExpired=true`; do not convert this into a hard redirect.
@@ -76,21 +86,23 @@ Both use module-level `SimpleCookieJar` instances (`casJar`, `jwxtJar`). Cookie 
 - `app/dashboard/layout.tsx` owns the global expired-login banner and the dashboard auth gate.
 
 **YSU relogin paths**:
+
 - `providers/ysu/relogin.ts` handles remembered-credential relogin and must verify CAS before returning success.
 - `providers/ysu/protocol/cas.ts` contains CAS login/MFA/authorization primitives; avoid treating a non-login URL as successful auth without checking `isAuthenticated()` because CAS may land on reAuth/MFA pages.
 - `providers/ysu/emap-fetcher.ts` maps JWXT/CAS protocol errors into `ProviderError`; CAS `NotAuthenticatedError` from JWXT reauthorization should remain `AUTH_SESSION_EXPIRED`.
+
 ### Layer Overview
 
-| Layer | File | Responsibility |
-|-------|------|----------------|
-| Provider contracts | `providers/types.ts` | `AcademicProvider` interface and app-facing domain models |
-| Provider runtime | `providers/provider-context.tsx`, `providers/provider-service.ts` | Active provider context, initialization, relogin, logout |
-| Provider hooks | `providers/hooks/` | Cached UI data hooks; UI should consume these instead of legacy facades |
-| YSU provider | `providers/ysu/` | YSU-specific CAS/JWXT protocol, session lifecycle, EMAP fetchers, diagnostics |
-| Cookie / HTTP | `lib/cookie.ts` | `SimpleCookieJar`, `fetchWithJar`, `capacitorHttpSend` with native store sync |
-| Native helpers | `lib/native/` | Capacitor platform, notification, WebView compatibility, widget bridge helpers |
-| Storage helpers | `lib/storage/` | Secure storage, cache, avatar/background storage, persisted key naming |
-| State stores | `lib/stores/` | Zustand stores: auth, settings, refresh, update, MFA modal, mobile header |
+| Layer              | File                                                              | Responsibility                                                                 |
+| ------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Provider contracts | `providers/types.ts`                                              | `AcademicProvider` interface and app-facing domain models                      |
+| Provider runtime   | `providers/provider-context.tsx`, `providers/provider-service.ts` | Active provider context, initialization, relogin, logout                       |
+| Provider hooks     | `providers/hooks/`                                                | Cached UI data hooks; UI should consume these instead of legacy facades        |
+| YSU provider       | `providers/ysu/`                                                  | YSU-specific CAS/JWXT protocol, session lifecycle, EMAP fetchers, diagnostics  |
+| Cookie / HTTP      | `lib/cookie.ts`                                                   | `SimpleCookieJar`, `fetchWithJar`, `capacitorHttpSend` with native store sync  |
+| Native helpers     | `lib/native/`                                                     | Capacitor platform, notification, WebView compatibility, widget bridge helpers |
+| Storage helpers    | `lib/storage/`                                                    | Secure storage, cache, avatar/background storage, persisted key naming         |
+| State stores       | `lib/stores/`                                                     | Zustand stores: auth, settings, refresh, update, MFA modal, mobile header      |
 
 UI code consumes `providers/` (`AcademicProvider`, hooks, provider context/service); do not reintroduce `lib/api.ts`, `lib/types.ts`, or `lib/use-cached-data.ts`. Keep school-specific parsing/session logic under provider implementations such as `providers/ysu/`.
 
@@ -143,18 +155,22 @@ Release body follows this structure (top to bottom):
 ## 更新说明
 
 ### 新功能
+
 - **标题加粗**：描述功能是什么、用户如何使用
 
 ### Bug 修复
+
 - **标题加粗**：详细描述问题原因和修复方案
 
 ### 改进
+
 - **标题加粗**：描述改动了什么、带来了什么好处
 
 **Full Changelog**: https://github.com/Youwenqwq/ysu-client/compare/v{PREV}...v{CURR}
 ```
 
 Rules:
+
 - Categories in order: 新功能 → Bug 修复 → 改进
 - Each bullet starts with `- **加粗标题**：`
 - Description follows the colon, explaining the "what" and "why"

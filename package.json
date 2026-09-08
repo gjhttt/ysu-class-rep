@@ -1,6 +1,6 @@
 {
-  "name": "ysu-client",
-  "version": "0.12.1",
+  "name": "ysu-study",
+  "version": "0.1.0",
   "type": "module",
   "private": true,
   "scripts": {

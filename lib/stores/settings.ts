@@ -103,7 +103,7 @@ export const useSettingsStore = create<SettingsState>()(
       backgroundBlurAmount: 20,
       cardStyle: "solid",
       cardOpacity: 100,
-      defaultLandingPage: "overview",
+      defaultLandingPage: "schedule",
       widgetSyncReminderHours: 24,
       widgetShowNextDaySchedule: false,
       avatarImage: "",
@@ -168,6 +168,11 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: STORAGE_KEYS.settings,
       storage: createJSONStorage(() => localStorage),
+      version: 1,
+      migrate: (persistedState, version) => ({
+        ...(persistedState as SettingsState),
+        ...(version < 1 ? { defaultLandingPage: "schedule" as LandingPage } : {}),
+      }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },

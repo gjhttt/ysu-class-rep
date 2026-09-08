@@ -4,7 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import useSWR, { type KeyedMutator, type SWRConfiguration } from "swr"
 import { useAuthStore } from "@/lib/stores/auth"
 import { getSchoolConfigScope } from "@/lib/server-config"
-import { cacheGetStale, cacheKey, cacheSet, DEFAULT_TTL_MS, LONG_TTL_MS } from "@/lib/storage/cache"
+import {
+  cacheGetStale,
+  cacheKey,
+  cacheSet,
+  DEFAULT_TTL_MS,
+  LONG_TTL_MS,
+  stripCacheMetadata,
+} from "@/lib/storage/cache"
 import { useRefreshStore } from "@/lib/stores/refresh"
 import { hasCapability } from "../capabilities"
 import { ProviderError, ProviderErrorCode } from "../errors"
@@ -19,6 +26,7 @@ export interface ProviderQueryResult<T> {
   error: ProviderError | undefined
   mutate: KeyedMutator<T>
   isStale: boolean
+  updatedAt: number | undefined
 }
 
 interface ProviderCachePolicy {
@@ -97,7 +105,7 @@ export function providerQueryKey(
 export function providerCacheKey(
   providerId: string,
   schoolConfigScope: string,
-  username: string,
+  accountScope: string,
   feature: string,
   params?: unknown
 ): string {
@@ -105,7 +113,7 @@ export function providerCacheKey(
     "provider",
     providerId,
     schoolConfigScope,
-    username,
+    accountScope,
     feature,
     stableStringify(params ?? null),
   ])
@@ -122,6 +130,7 @@ export function useProviderQuery<T>(
   const provider = useProvider()
   const isReady = useProviderReady()
   const username = useAuthStore((state) => state.username)
+  const cacheNamespace = useAuthStore((state) => state.cacheNamespace)
   const schoolConfigScope = getSchoolConfigScope()
   const capabilityError = useMemo(
     () =>
@@ -137,20 +146,24 @@ export function useProviderQuery<T>(
   )
 
   const policy = getCachePolicy(feature)
-  const canPersist = enabled && !capabilityError && policy.persist && !!username
+  const canPersist = enabled && !capabilityError && policy.persist && !!cacheNamespace
   const persistentKey = useMemo(
     () =>
-      username ? providerCacheKey(provider.id, schoolConfigScope, username, feature, params) : null,
-    [provider.id, schoolConfigScope, username, feature, params]
+      cacheNamespace
+        ? providerCacheKey(provider.id, schoolConfigScope, cacheNamespace, feature, params)
+        : null,
+    [provider.id, schoolConfigScope, cacheNamespace, feature, params]
   )
   const cached = useMemo(
     () => (canPersist && persistentKey ? cacheGetStale<T>(persistentKey, policy.ttl) : null),
     [canPersist, persistentKey, policy.ttl]
   )
   const [servedStale, setServedStale] = useState(() => cached?.stale ?? false)
+  const [updatedAt, setUpdatedAt] = useState<number | undefined>(() => cached?.updatedAt)
 
   useEffect(() => {
     setServedStale(cached?.stale ?? false)
+    setUpdatedAt(cached?.updatedAt)
     // Only reset from the persistent cache when the query key changes. If a
     // revalidation fails and falls back to a still-valid cache entry, keep the
     // stale marker instead of immediately clearing it on the next render.
@@ -165,8 +178,9 @@ export function useProviderQuery<T>(
       try {
         const result = await fetcher()
         if (canPersist && persistentKey) {
-          cacheSet(persistentKey, result)
+          cacheSet(persistentKey, stripCacheMetadata(result))
         }
+        setUpdatedAt(Date.now())
         setServedStale(false)
         return result
       } catch (err) {
@@ -181,6 +195,7 @@ export function useProviderQuery<T>(
           const fallback = cacheGetStale<T>(persistentKey, policy.ttl)
           if (fallback) {
             setServedStale(true)
+            setUpdatedAt(fallback.updatedAt)
             return fallback.data
           }
         }
@@ -190,7 +205,10 @@ export function useProviderQuery<T>(
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 5000,
+      dedupingInterval: 10_000,
+      errorRetryCount: 1,
+      errorRetryInterval: 1500,
+      shouldRetryOnError: (retryError) => retryError.code === ProviderErrorCode.NETWORK_ERROR,
       fallbackData: cached?.data,
       ...config,
     }
@@ -249,5 +267,6 @@ export function useProviderQuery<T>(
     error: capabilityError ?? error ?? undefined,
     mutate,
     isStale,
+    updatedAt,
   }
 }

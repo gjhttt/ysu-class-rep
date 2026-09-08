@@ -71,7 +71,7 @@ import {
   submitEvaluation as _submitEvaluation,
 } from "./protocol/jwxt"
 
-function mapJWXTError(e: unknown): ProviderError {
+export function mapJWXTError(e: unknown): ProviderError {
   const sessionError = mapCASSessionError(e)
   if (sessionError) return sessionError
 
@@ -82,6 +82,14 @@ function mapJWXTError(e: unknown): ProviderError {
     return new ProviderError(ProviderErrorCode.BACKEND_BUSINESS_ERROR, e.msg ?? e.message, e, 400)
   }
   if (e instanceof JWXTProtocolError) {
+    if (e.message.startsWith("request failed for ")) {
+      const timedOut = /timeout|timed out|ETIMEDOUT/i.test(e.message)
+      return new ProviderError(
+        timedOut ? ProviderErrorCode.TIMEOUT : ProviderErrorCode.NETWORK_ERROR,
+        timedOut ? "教务系统响应超时，请稍后手动重试。" : "无法连接教务系统，请检查网络后重试。",
+        e
+      )
+    }
     return new ProviderError(ProviderErrorCode.BACKEND_PROTOCOL_ERROR, e.message, e, 500)
   }
   if (e instanceof JWXTError) {
@@ -93,9 +101,7 @@ function mapJWXTError(e: unknown): ProviderError {
 async function withJWXT<T>(fn: () => Promise<T>): Promise<T> {
   try {
     const result = await fn()
-    persistJWXTSession().catch((e) => {
-      console.warn("Failed to persist JWXT session", e)
-    })
+    persistJWXTSession().catch(() => {})
     return result
   } catch (e) {
     throw mapJWXTError(e)

@@ -1,6 +1,8 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 
+def appConfig = new groovy.json.JsonSlurper().parse(file('../../app.config.json'))
+
 android {
     namespace = "com.youwenqwq.ysuclient"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -8,10 +10,15 @@ android {
         buildConfig = true
     }
     defaultConfig {
-        applicationId "com.youwenqwq.ysuclient"
+        applicationId appConfig.androidPackage
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionName "1.5.1"
+        versionName appConfig.version
+        manifestPlaceholders = [appScheme: appConfig.scheme]
+        resValue "string", "app_name", appConfig.appName
+        resValue "string", "title_activity_main", appConfig.appName
+        resValue "string", "package_name", appConfig.androidPackage
+        resValue "string", "custom_url_scheme", appConfig.scheme
         def versionMatcher = versionName =~ /^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/
         if (!versionMatcher.matches()) {
             throw new GradleException("Invalid versionName: ${versionName}")
@@ -66,9 +73,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
-        debug {
-            signingConfig signingConfigs.release
-        }
+        debug {}
     }
 }
 

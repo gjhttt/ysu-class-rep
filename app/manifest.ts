@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { APP_CONFIG } from "@/lib/app-config"
 
 export const dynamic = "force-static"
 
@@ -14,16 +15,16 @@ export default function manifest(): LocalizedManifest {
 
   return {
     id: `${basePath}/`,
-    name: "燕大终端",
-    short_name: "燕大终端",
+    name: APP_CONFIG.appName,
+    short_name: APP_CONFIG.shortName,
     description: "面向燕山大学教务系统的第三方客户端",
     lang: "zh-CN",
     dir: "ltr",
     name_localized: {
-      en: "YSU Terminal",
+      en: APP_CONFIG.englishName,
     },
     short_name_localized: {
-      en: "YSU Terminal",
+      en: APP_CONFIG.englishName,
     },
     description_localized: {
       en: "A third-party client for the Yanshan University academic system.",
@@ -36,9 +37,9 @@ export default function manifest(): LocalizedManifest {
         url: "dashboard/schedule/",
         icons: [
           {
-            src: "icons/icon-192.png",
+            src: "icons/icon-192.webp",
             sizes: "192x192",
-            type: "image/png",
+            type: "image/webp",
           },
         ],
       },
@@ -49,9 +50,9 @@ export default function manifest(): LocalizedManifest {
         url: "dashboard/grades/",
         icons: [
           {
-            src: "icons/icon-192.png",
+            src: "icons/icon-192.webp",
             sizes: "192x192",
-            type: "image/png",
+            type: "image/webp",
           },
         ],
       },
@@ -62,9 +63,9 @@ export default function manifest(): LocalizedManifest {
         url: "dashboard/exams/",
         icons: [
           {
-            src: "icons/icon-192.png",
+            src: "icons/icon-192.webp",
             sizes: "192x192",
-            type: "image/png",
+            type: "image/webp",
           },
         ],
       },
@@ -78,9 +79,9 @@ export default function manifest(): LocalizedManifest {
           url: "dashboard/schedule/",
           icons: [
             {
-              src: "icons/icon-192.png",
+              src: "icons/icon-192.webp",
               sizes: "192x192",
-              type: "image/png",
+              type: "image/webp",
             },
           ],
         },
@@ -91,9 +92,9 @@ export default function manifest(): LocalizedManifest {
           url: "dashboard/grades/",
           icons: [
             {
-              src: "icons/icon-192.png",
+              src: "icons/icon-192.webp",
               sizes: "192x192",
-              type: "image/png",
+              type: "image/webp",
             },
           ],
         },
@@ -104,9 +105,9 @@ export default function manifest(): LocalizedManifest {
           url: "dashboard/exams/",
           icons: [
             {
-              src: "icons/icon-192.png",
+              src: "icons/icon-192.webp",
               sizes: "192x192",
-              type: "image/png",
+              type: "image/webp",
             },
           ],
         },
@@ -119,27 +120,27 @@ export default function manifest(): LocalizedManifest {
     theme_color: "#ffffff",
     icons: [
       {
-        src: "icons/icon-192.png",
+        src: "icons/icon-192.webp",
         sizes: "192x192",
-        type: "image/png",
+        type: "image/webp",
         purpose: "any",
       },
       {
-        src: "icons/icon-512.png",
+        src: "icons/icon-512.webp",
         sizes: "512x512",
-        type: "image/png",
+        type: "image/webp",
         purpose: "any",
       },
       {
-        src: "icons/icon-maskable-192.png",
+        src: "icons/icon-192.webp",
         sizes: "192x192",
-        type: "image/png",
+        type: "image/webp",
         purpose: "maskable",
       },
       {
-        src: "icons/icon-maskable-512.png",
+        src: "icons/icon-512.webp",
         sizes: "512x512",
-        type: "image/png",
+        type: "image/webp",
         purpose: "maskable",
       },
     ],

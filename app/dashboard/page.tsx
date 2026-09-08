@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -15,7 +14,6 @@ import { loadAvatarImage } from "@/lib/storage/avatar"
 import {
   useClassPeriods,
   useCurrentWeek,
-  useEvaluationTasks,
   useExams,
   useGPAStats,
   useSchedule,
@@ -29,6 +27,7 @@ import {
   courseStartSection,
   courseWeekDay,
   isCourseActiveInWeek,
+  lastScheduledWeek,
   isCoursePast,
   periodIsInUse,
   resolveWidgetCurrentWeek,
@@ -36,16 +35,18 @@ import {
 import { syncScheduleToWidget, syncExamsToWidget } from "@/lib/native/widget-bridge"
 import { syncClassAlarmsToNative } from "@/lib/native/notify"
 import type { Course } from "@/providers/types"
+import { beijingDayDifference, getBeijingClockMinutes } from "@/lib/academic/time"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
 import {
   Calendar,
-  ChevronRight,
-  ClipboardCheck,
   GraduationCap,
   BarChart3,
   Clock,
   BookOpen,
   Eye,
   EyeOff,
+  RefreshCw,
 } from "lucide-react"
 
 function isCourseActiveToday(course: Course, currentWeek: number, currentWeekday: number): boolean {
@@ -54,7 +55,7 @@ function isCourseActiveToday(course: Course, currentWeek: number, currentWeekday
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
+  const currentSemesterWeekRef = useRef<HTMLSpanElement>(null)
   const avatarImage = useSettingsStore((s) => s.avatarImage)
   const avatarUrl = useStoredMediaUrl(avatarImage, loadAvatarImage)
   const widgetSyncReminderHours = useSettingsStore((s) => s.widgetSyncReminderHours)
@@ -79,15 +80,6 @@ export default function DashboardPage() {
     return t("dashboard.minutesOnly", { minutes: Math.max(1, minutes) })
   }
 
-  /** 考试的日历天数差（0=今天，1=明天）。 */
-  const examDayDiff = (timestamp: number): number => {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-    const exam = new Date(timestamp)
-    const day = new Date(exam.getFullYear(), exam.getMonth(), exam.getDate()).getTime()
-    return Math.round((day - today) / 86_400_000)
-  }
-
   const student = useStudentInfo()
   const currentWeek = useCurrentWeek()
   const termCalendar = useTermCalendar()
@@ -98,13 +90,6 @@ export default function DashboardPage() {
   })
   const exams = useExams()
   const periodsRaw = useClassPeriods()
-  const evaluationTasks = useEvaluationTasks()
-
-  // 只统计进行中的评教任务：未开始/已结束的任务学生无法操作，不打扰。
-  const pendingEvaluationCount = useMemo(
-    () => (evaluationTasks.data ?? []).filter((task) => task.status === "active").length,
-    [evaluationTasks.data]
-  )
 
   const courses = useMemo(() => schedule.data ?? [], [schedule.data])
   const examRows = useMemo(() => exams.data ?? [], [exams.data])
@@ -193,15 +178,12 @@ export default function DashboardPage() {
     return examRows.filter((e) => !isExamCompleted(e)).sort(compareExamStartTime)
   }, [examRows])
 
-  const [nowMinutes, setNowMinutes] = useState(() => {
-    const now = new Date()
-    return now.getHours() * 60 + now.getMinutes()
-  })
+  const [nowMinutes, setNowMinutes] = useState(() => getBeijingClockMinutes())
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     const id = setInterval(() => {
-      const now = new Date()
-      setNowMinutes(now.getHours() * 60 + now.getMinutes())
+      setNowMinutes(getBeijingClockMinutes())
     }, 60_000)
     return () => clearInterval(id)
   }, [])
@@ -229,6 +211,29 @@ export default function DashboardPage() {
   }
 
   const currentRange = currentCourse ? courseTimeRange(currentCourse) : null
+
+  const lastUpdated = Math.max(...hooks.map((hook) => hook.updatedAt ?? 0))
+  const semesterWeeks =
+    lastScheduledWeek(schedule.data ?? []) ||
+    termCalendar.data?.teachingWeeks ||
+    termCalendar.data?.totalWeeks ||
+    0
+  const progressWeek = Math.min(Math.max(currentWeek.data?.week || 0, 0), semesterWeeks)
+  const semesterProgress = semesterWeeks
+    ? (progressWeek / semesterWeeks) * 100
+    : 0
+
+  useEffect(() => {
+    currentSemesterWeekRef.current?.scrollIntoView({ block: "nearest", inline: "center" })
+  }, [currentWeek.data?.week, semesterWeeks])
+
+  async function handleRefresh() {
+    if (refreshing) return
+    setRefreshing(true)
+    const refreshers = hooks.map((hook) => () => hook.mutate())
+    for (const refresh of refreshers) await refresh().catch(() => undefined)
+    setRefreshing(false)
+  }
 
   let nextCourseInfo: { course: Course; range: [number, number] } | null = null
   if (!currentCourse) {
@@ -258,8 +263,46 @@ export default function DashboardPage() {
     )
   }
 
+  if (errors.length > 0 && !hasAnyData) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <p className="font-medium">数据加载失败</p>
+          <p className="text-sm text-muted-foreground">{errors[0]?.message}</p>
+          <Button onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+            重新加载
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 md:gap-8">
+      <div className="flex items-center justify-end gap-3 text-xs text-muted-foreground">
+        <span>
+          {lastUpdated > 0
+            ? `数据更新于 ${new Intl.DateTimeFormat("zh-CN", {
+                timeZone: "Asia/Shanghai",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(lastUpdated)}`
+            : "尚无更新时间"}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          aria-label="刷新总览数据"
+        >
+          <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+          刷新
+        </Button>
+      </div>
       <Card className="md:hidden">
         <CardHeader className="flex flex-row items-center gap-3 pb-3">
           <Avatar className="size-14 shrink-0">
@@ -273,6 +316,7 @@ export default function DashboardPage() {
             {student.data?.department && (
               <CardDescription className="truncate">{student.data.department}</CardDescription>
             )}
+            <p className="truncate pt-1 text-xs text-primary/80">{t("dashboard.encouragement")}</p>
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 border-t pt-3">
@@ -313,7 +357,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="hidden gap-6 md:grid md:grid-cols-2 lg:grid-cols-4">
+      <div className="hidden gap-6 md:grid md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <GraduationCap className="size-6 shrink-0 text-primary" />
@@ -324,8 +368,11 @@ export default function DashboardPage() {
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="truncate text-sm text-muted-foreground">
-            {student.data?.department} · {student.data?.major}
+          <CardContent className="text-sm text-muted-foreground">
+            <p className="truncate">
+              {student.data?.department} · {student.data?.major}
+            </p>
+            <p className="mt-1 truncate text-xs text-primary/80">{t("dashboard.encouragement")}</p>
           </CardContent>
         </Card>
 
@@ -369,38 +416,49 @@ export default function DashboardPage() {
               : t("dashboard.gpaInitial")}
           </CardContent>
         </Card>
-
-        <Card
-          className="cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-          onClick={() => router.push("/dashboard/evaluation")}
-        >
-          <CardHeader className="flex flex-row items-center gap-3 pb-2">
-            <Clock className="size-6 shrink-0 text-primary" />
-            <div>
-              <CardTitle className="text-base">{t("app.evaluation")}</CardTitle>
-              <CardDescription>{t("evaluation.title")}</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            {t("evaluation.description")}
-          </CardContent>
-        </Card>
       </div>
 
-      {pendingEvaluationCount > 0 && (
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard/evaluation")}
-          className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 text-left transition-colors active:bg-primary/10"
-        >
-          <ClipboardCheck className="size-5 shrink-0 text-primary" />
-          <span className="flex-1 text-sm font-medium">
-            {t("dashboard.pendingEvaluation", {
-              count: pendingEvaluationCount,
-            })}
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </button>
+      {semesterWeeks > 0 && (
+        <Card className="overflow-hidden">
+          <CardContent className="flex flex-col gap-3 py-4">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">{t("dashboard.semesterProgress")}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t("dashboard.semesterProgressHint")}
+                </p>
+              </div>
+              <span className="shrink-0 text-sm font-semibold text-primary tabular-nums">
+                {t("dashboard.semesterProgressValue", {
+                  current: progressWeek,
+                  total: semesterWeeks,
+                })}
+              </span>
+            </div>
+            <Progress value={semesterProgress} className="h-2" />
+            <div className="-mx-1 [scrollbar-width:none] overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden">
+              <div className="flex w-max snap-x gap-2">
+                {Array.from({ length: semesterWeeks }, (_, index) => index + 1).map((week) => (
+                  <span
+                    key={week}
+                    ref={week === progressWeek ? currentSemesterWeekRef : undefined}
+                    aria-current={week === progressWeek ? "step" : undefined}
+                    className={cn(
+                      "flex size-9 snap-start items-center justify-center rounded-full border text-xs tabular-nums",
+                      week === progressWeek
+                        ? "border-primary bg-primary font-semibold text-primary-foreground"
+                        : week < (currentWeek.data?.week || 0)
+                          ? "border-primary/20 bg-primary/5 text-primary"
+                          : "bg-muted/30 text-muted-foreground"
+                    )}
+                  >
+                    {week}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {currentCourse && currentRange ? (
@@ -542,7 +600,9 @@ export default function DashboardPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {upcomingExams.map((exam, idx) => {
-                const dayDiff = exam.startTimestamp ? examDayDiff(exam.startTimestamp) : null
+                const dayDiff = exam.startTimestamp
+                  ? beijingDayDifference(exam.startTimestamp)
+                  : null
                 return (
                   <div
                     key={idx}

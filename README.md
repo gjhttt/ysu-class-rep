@@ -1,68 +1,77 @@
 <p align="center">
-  <img src="public/icon.svg" width="128" height="128" alt="燕大终端图标" />
+  <img src="public/icons/icon-192.webp" width="128" height="128" alt="燕大课代表图标" />
 </p>
 
-<h1 align="center">燕大终端</h1>
+<h1 align="center">燕大课代表 · YSU Class Rep</h1>
 
 <p align="center">
-  <a href="README.zh-CN.md">详细文档（中文）</a> · <a href="README.en.md">English</a>
+  面向燕山大学学生的轻量、非官方教务查询 Android 客户端
 </p>
 
 <p align="center">
-  燕山大学教务系统第三方 Android 客户端
+  第一阶段开发中；无真实账号时可使用脱敏 Mock 检查界面
 </p>
 
 ---
 
-> 本项目为 **第三方客户端，与燕山大学官方无任何关联。** 仅供个人学习交流，代码**完全由 AI 进行编写**，
-> 人工仅进行了基本设计调试与粗略审计，使用即默认了解并接受相关风险，请勿用于侵犯他人权益或违反学校规定的场景。
+> 本项目是第三方客户端，与燕山大学官方无任何隶属、授权或担保关系。请遵守学校规定，勿用于侵犯他人权益。
 
 ## 这是什么
 
-燕大终端是一个 Android 应用，可以让你更方便地使用燕山大学教务系统。设计初衷是解决第三方课表需手动更新，
-而今日校园 App 加载又过于缓慢，导致信息查询低效率的问题。
+`燕大课代表` 基于上游 `ysu-client` 二次开发，沿用已经验证的 Next.js、React、TypeScript、Capacitor 和 YSU Provider 分层。名称、图标、配色和 Android 应用 ID 均独立配置在 [`app.config.json`](app.config.json) 中。
 
 本项目实现了以下功能：
 
-- **登录**：CAS 统一认证，支持验证码和 MFA 多因素验证，记住登录状态；
-  内置登录速率限制保护，防止频繁登录触发风控
-- **查成绩**：按学期筛选，查看统计、分布和排名；支持学期 GPA 计算与学位课程标识
-- **看课表**：合并理论课与实验课，按周切换，桌面和移动端双布局；
-  实时高亮当前课程，支持课程活动签到 / 签退
-- **查考试**：按学期查看考试安排
-- **看绩点**：学分和绩点一目了然
-- **培养方案**：查看课程完成情况和学业预警
-- **评教**：支持学生评教功能，评教支持批量一键自动填写最高分
-- **上课通知**：支持在设置页开启上课通知，提前提醒上课
-- **成绩/考试监听**：支持以最低15min的间隔监听教务系统，获取最新成绩/考试安排
-
-应用通过 Capacitor 打包为 Android WebView 壳应用，支持 OTA 热更新与 APK 外壳版本检测。
+- CAS 登录、图形验证码和 MFA 交互沿用上游实现，不绕过验证。
+- 总览显示学生信息、教学周、平均绩点、今日课程、近期考试、缓存时间与手动刷新。
+- 成绩支持学期筛选、排序、GPA 汇总、教学班/同课程统计、分布和排名。
+- 课表与考试查询沿用 Provider 服务层；移动端采用总览、课表、成绩、考试、我的五栏导航。
+- `NEXT_PUBLIC_MOCK_MODE=true` 时只返回明确标识的脱敏 fixture，不请求学校系统。
+- 第一版除手动学生评教外保持只读；评教必须逐题填写、服务端预检并二次确认，不提供自动作答或批量提交。补考报名、完成度重算和移动签到仍被禁用。
 
 ## 数据来源与安全性
 
-燕大终端 App 的所有业务逻辑**均在本地实现**，从官方教务系统获取数据并保存在本地，中间不经过任何其他服务器。
-登录之后的凭据数据存储在本地，凭据通过系统安全存储（Android Keystore / iOS Keychain）加密保存。
+真实教务请求只允许在 Android 端由 Capacitor HTTP 直接连接学校系统。Web 端不会经过第三方代理；请使用 Mock 模式进行浏览器开发。项目未接入统计、广告或第三方分析服务。
 
-为保证教务系统数据不受意外修改，本项目除学生评教外，均仅实现了数据查询功能。
+认证会话通过 Android 系统安全存储保存；展示缓存只保留必要数据。退出登录会清除当前凭据、记住的密码和展示缓存。源码、日志和 Git 中不得出现真实学号、密码、Cookie、Ticket 或 Token。
 
-## 安装
+## Windows 开发
 
-从 [GitHub Releases](https://github.com/Youwenqwq/ysu-client/releases) 下载最新的 APK 安装包。
+要求：Node.js、pnpm 11、Android Studio/Android SDK，以及项目 Gradle Wrapper 支持的 JDK。
 
-> 如遇网络故障，可在应用内配置 GitHub 代理镜像。设置入口会在出现网络故障时弹出。
+```powershell
+Set-Location E:\YSU-Study
+pnpm install --frozen-lockfile
+Copy-Item .env.example .env.local
+pnpm run dev
+```
 
-## 兼容性
+浏览器打开 `http://localhost:3000`。Mock 登录可输入任意非空内容；fixture 始终显示“脱敏示例”，不得作为真实接口结果。
 
-应用运行在系统 WebView 中。如遇渲染异常，请检查 WebView 版本是否过低——
-**最低要求 Chromium v111**。可通过 Play Store 等方式更新 Android System WebView。
+## 构建 Android Debug APK
+
+真实模式构建前删除本机 `.env.local` 中的 Mock 开关，然后执行：
+
+```powershell
+Set-Location E:\YSU-Study
+pnpm run typecheck
+pnpm run lint
+pnpm run test
+pnpm run build
+pnpm exec cap sync android
+Set-Location android
+.\gradlew.bat assembleDebug
+```
+
+APK 输出到 `E:\YSU-Study\android\app\build\outputs\apk\debug\app-debug.apk`。也可在项目根目录执行 `pnpm exec cap open android` 后由 Android Studio 构建。不要提交 `.env.local`、签名密钥或本机 SDK 路径。
 
 ## 相关项目
 
-业务逻辑参考以下项目实现：
+本项目保留上游 Git 历史、GPL-3.0 许可证和原作者版权信息：
 
-- [ysu-sdk](https://github.com/Youwenqwq/ysu-sdk) — 教务系统 SDK
-- [ysu-api](https://github.com/Youwenqwq/ysu-api) — 教务系统 API 服务
+- [Youwenqwq/ysu-client](https://github.com/Youwenqwq/ysu-client) — 原客户端与主要代码来源
+- [Youwenqwq/ysu-sdk](https://github.com/Youwenqwq/ysu-sdk) — 接口语义与协议参考
 
 ## 协议
 
-本项目源代码按 [GPL-3.0 协议](LICENSE) 开放。
+本项目及其分发版本继续按 [GPL-3.0](LICENSE) 提供。发布修改版源码或 APK 时，必须保留许可证与版权/来源声明、标注修改，并向接收者提供相应完整源代码及同等 GPL 权利；不要把本项目改成闭源分发。仅在本机私用而不向他人提供副本时，不触发 GPL 的分发义务。

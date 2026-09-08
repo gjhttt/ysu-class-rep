@@ -1,4 +1,6 @@
-const APP_PREFIX = "academic-client"
+import { APP_CONFIG } from "@/lib/app-config"
+
+const APP_PREFIX = APP_CONFIG.storagePrefix
 const LEGACY_PREFIX = "ysu"
 
 export const STORAGE_KEYS = {

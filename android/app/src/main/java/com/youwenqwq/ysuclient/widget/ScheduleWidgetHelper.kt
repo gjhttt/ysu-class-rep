@@ -82,7 +82,7 @@ class ScheduleWidgetHelper(private val context: Context) {
 
         // Set click intent to open app schedule page via Deep Link
         val clickPendingIntent = WidgetConfig.createDeepLinkPendingIntent(
-            context, appWidgetId, "ysuclient://schedule"
+            context, appWidgetId, "${context.getString(R.string.custom_url_scheme)}://schedule"
         )
         views.setOnClickPendingIntent(R.id.widget_container, clickPendingIntent)
 

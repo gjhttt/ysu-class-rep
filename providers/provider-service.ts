@@ -4,6 +4,8 @@ import { getSchoolId, setSchoolConfig } from "@/lib/server-config"
 import { DEFAULT_SCHOOL_ID, hasSchoolConfig } from "@/lib/school-configs"
 import type { AcademicProvider } from "./types"
 import { createProvider, hasProvider } from "./provider-registry"
+import { clearAllCache } from "@/lib/storage/cache"
+import { clearRememberedCredentials } from "@/lib/storage/secure"
 
 function resolveSupportedSchoolId(schoolId: string): string {
   if (hasSchoolConfig(schoolId) && hasProvider(schoolId)) {
@@ -64,8 +66,14 @@ export async function resetActiveProvider(): Promise<void> {
 }
 
 export async function logoutActiveProvider(): Promise<void> {
-  await getActiveProvider().logout()
-  activeInitializePromise = null
+  try {
+    await getActiveProvider().logout()
+  } finally {
+    useAuthStore.getState().clearCredential()
+    clearAllCache()
+    await clearRememberedCredentials().catch(() => {})
+    activeInitializePromise = null
+  }
 }
 
 export async function reloginActiveProvider(): Promise<boolean> {

@@ -304,8 +304,7 @@ export interface HttpRequest {
   readonly redirect: "manual" | "follow"
   readonly timeoutMs?: number
   /**
-   * 可选中止信号。Web 传输层（proxyHttpSend）真实取消请求；
-   * CapacitorHttp 不支持中止 in-flight 请求，仅在发送前检查
+   * 可选中止信号。CapacitorHttp 不支持中止 in-flight 请求，仅在发送前检查
    * （已中止则直接抛错），已发出的请求结果由调用方丢弃。
    */
   readonly signal?: AbortSignal
@@ -332,7 +331,7 @@ export async function fetchWithJar(jar: SimpleCookieJar, req: HttpRequest): Prom
 }
 
 /**
- * 无会话请求：走平台传输层（原生 CapacitorHttp / Web 边缘代理），
+ * 无会话请求：走 Android 原生 CapacitorHttp，
  * 但使用一次性 jar，不读写任何持久 cookie。
  * 用于微信扫码登录等与教务会话无关的第三方端点。
  */
@@ -342,7 +341,6 @@ export async function fetchStateless(req: HttpRequest): Promise<HttpResponse> {
 
 import { isCapacitor } from "./native/platform"
 import { getCustomUserAgent } from "./custom-user-agent"
-import { useActivationStore } from "./stores/activation"
 
 // Cache Capacitor core module to avoid dynamic import overhead on every request.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -357,24 +355,12 @@ async function send(jar: SimpleCookieJar, req: HttpRequest): Promise<HttpRespons
   if (isCapacitor()) {
     return capacitorHttpSend(jar, req)
   }
-  // Web 端无法直连教务系统（CORS + Cookie/User-Agent/Referer 为浏览器
-  // forbidden header），统一走 EdgeOne 边缘函数代理。
-  return proxyHttpSend(jar, req)
+  throw new Error("为保护账号与教务数据，真实查询仅支持 Android 端直连；Web 调试请启用 Mock 模式。")
 }
 
 /**
- * Web 端传输：经 EdgeOne 代理转发（协议见 website/edge-functions/api/proxy.js）。
- * 浏览器禁改的头部经 x-proxy-* 映射；上游状态码经 x-proxy-status 回传
- * （浏览器 fetch redirect:'manual' 会把 3xx 变成 opaqueredirect 隐藏 Location，
- * 因此代理对浏览器恒返回 200）。
- *
- * 代理基址默认同源 /api/proxy（App 与代理部署在同一 EdgeOne Pages 站点）；
- * 本地开发用 NEXT_PUBLIC_PROXY_BASE_URL 指向已部署的代理，
- * 例如 https://ysu.welain.com/api/proxy 。
- */
-/**
  * 激活接口地址：与代理同站点的 /api/activate；本地开发经
- * NEXT_PUBLIC_PROXY_BASE_URL 推导到已部署站点（见 proxyHttpSend 注释）。
+ * NEXT_PUBLIC_PROXY_BASE_URL 推导到已部署站点。
  */
 export function getActivateUrl(): string {
   const base = process.env.NEXT_PUBLIC_PROXY_BASE_URL
@@ -382,115 +368,6 @@ export function getActivateUrl(): string {
     return base.replace(/\/api\/proxy\/?$/, "/api/activate")
   }
   return "/api/activate"
-}
-
-async function proxyHttpSend(jar: SimpleCookieJar, req: HttpRequest): Promise<HttpResponse> {
-  const headers = new Headers()
-  for (const [k, v] of Object.entries(req.headers ?? {})) {
-    const lower = k.toLowerCase()
-    if (lower === "cookie") continue // jar 是唯一 cookie 来源
-    if (lower === "user-agent") {
-      headers.set("x-proxy-ua", v)
-    } else if (lower === "referer") {
-      headers.set("x-proxy-referer", v)
-    } else if (lower === "origin") {
-      headers.set("x-proxy-origin", v)
-    } else if (
-      lower === "accept-encoding" ||
-      lower === "host" ||
-      lower === "content-length" ||
-      lower === "connection"
-    ) {
-      continue
-    } else {
-      headers.set(k, v)
-    }
-  }
-  if (!headers.has("x-proxy-ua")) {
-    headers.set("x-proxy-ua", getCustomUserAgent())
-  }
-  if (!headers.has("accept")) {
-    headers.set(
-      "accept",
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-    )
-  }
-  if (!headers.has("accept-language")) {
-    headers.set("accept-language", "zh-CN,zh;q=0.9,en;q=0.8")
-  }
-  const cookieHeader = await jar.getCookieString(req.url)
-  if (cookieHeader) {
-    headers.set("x-proxy-cookie", cookieHeader)
-  }
-  // Web 激活凭证：proxy 配置 ACTIVATION_TOKEN 后逐请求校验（见 proxy.js）
-  const activationToken = useActivationStore.getState().token
-  if (activationToken) {
-    headers.set("x-activation", activationToken)
-  }
-
-  const proxyBase = process.env.NEXT_PUBLIC_PROXY_BASE_URL || "/api/proxy"
-  const proxyUrl = `${proxyBase}?url=${encodeURIComponent(req.url)}`
-  const response = await fetch(proxyUrl, {
-    method: req.method,
-    headers,
-    body: req.body,
-    // 代理恒返回 200，不存在需要浏览器处理的重定向
-    redirect: "follow",
-    signal: req.signal
-      ? AbortSignal.any([AbortSignal.timeout(req.timeoutMs ?? DEFAULT_TIMEOUT_MS), req.signal])
-      : AbortSignal.timeout(req.timeoutMs ?? DEFAULT_TIMEOUT_MS),
-  })
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "")
-    // token 被服务端轮换/吊销：清除本地凭证，ActivationGate 回落到激活页
-    if (response.status === 403 && detail.includes("ACTIVATION_REQUIRED")) {
-      useActivationStore.getState().clearToken()
-    }
-    throw new Error(`proxy request failed: HTTP ${response.status} ${detail}`)
-  }
-
-  // 上游 Set-Cookie（base64(JSON) 分片）回装 jar；域名归属按上游 URL 解析
-  let parsedSetCookies: string[] = []
-  const encodedSetCookie = response.headers.get("x-proxy-set-cookie")
-  if (encodedSetCookie) {
-    try {
-      const b64 = encodedSetCookie.split(", ").join("")
-      const bin = atob(b64)
-      const bytes = new Uint8Array(bin.length)
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-      const setCookies: unknown = JSON.parse(new TextDecoder().decode(bytes))
-      if (Array.isArray(setCookies)) {
-        parsedSetCookies = setCookies.filter((s): s is string => typeof s === "string")
-        for (const sc of parsedSetCookies) {
-          await jar.setCookie(sc, req.url, { ignoreError: true })
-        }
-      }
-    } catch {
-      // 代理头损坏不致命，忽略
-    }
-  }
-
-  const respHeaders: Record<string, string | string[]> = {}
-  for (const [k, v] of response.headers.entries()) {
-    const lower = k.toLowerCase()
-    if (lower === "x-proxy-set-cookie" || lower === "x-proxy-status") continue
-    if (lower.startsWith("access-control-")) continue
-    respHeaders[lower] = v
-  }
-  if (parsedSetCookies.length > 0) {
-    respHeaders["set-cookie"] = parsedSetCookies
-  }
-
-  const realStatus = Number(response.headers.get("x-proxy-status")) || response.status
-
-  return {
-    status: realStatus,
-    headers: respHeaders,
-    url: req.url,
-    text: () => response.clone().text(),
-    arrayBuffer: () => response.arrayBuffer(),
-  }
 }
 
 async function capacitorHttpSend(jar: SimpleCookieJar, req: HttpRequest): Promise<HttpResponse> {

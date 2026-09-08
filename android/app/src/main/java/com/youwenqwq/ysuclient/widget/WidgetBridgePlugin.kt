@@ -57,7 +57,7 @@ class WidgetBridgePlugin : Plugin() {
     }
     @PluginMethod
     fun clearWidgetData(call: PluginCall) {
-        UnifiedCache.clearWidgetData(context)
+        UnifiedCache.clearAll(context)
         updateAllWidgets()
         call.resolve()
     }

@@ -1,6 +1,6 @@
 import type { AcademicCompletion as ProtocolAcademicCompletion } from "./protocol/jwxt"
 import { useAuthStore } from "@/lib/stores/auth"
-import { getSchoolConfig, isFeatureAvailable } from "@/lib/server-config"
+import { isFeatureAvailable } from "@/lib/server-config"
 import { BaseProvider } from "../base-provider"
 import { ProviderError, ProviderErrorCode } from "../errors"
 import type {
@@ -35,7 +35,6 @@ import type {
   EvaluationDetail,
   EvaluationDetailQuery,
   EvaluationScoreInput,
-  EvaluationSubmitInput,
   EvaluationTask,
   EvaluationType,
   Exam,
@@ -62,9 +61,7 @@ import type {
   MakeupExamBatch,
   MakeupExamCourse,
   MakeupExamCourseQueryOptions,
-  MakeupExamSignupInput,
   PageQueryOptions,
-  ProviderMobile,
   ScheduleQueryOptions,
   SchoolClassInfo,
   SchoolClassQueryOptions,
@@ -94,7 +91,6 @@ import {
 import {
   calculateEvaluationScore as _calculateEvaluationScore,
   queryAcademicCompletion,
-  recalculateAcademicCompletion as recalculateAcademicCompletionImpl,
   queryAcademicWarnings,
   queryClassPeriods,
   queryCurrentWeek,
@@ -112,7 +108,6 @@ import {
   queryTeachingBuildings,
   queryClassrooms,
   queryClassroomSchedule,
-  signupMakeupExam,
   queryExperimentalSchedule,
   queryGpaStats,
   queryGradeDistribution,
@@ -148,9 +143,7 @@ import {
 } from "./xgxt-fetcher"
 import type { CreditRecord as ScxtCreditRecord } from "./protocol/scxt"
 import { initializeSession, resetSession, warmupSession } from "./adapters/session-adapter"
-import { YSUMobileAdapter } from "./adapters/mobile-adapter"
-import { ysuDiagnostics } from "./diagnostics"
-import { ysuNativeNotification } from "./native-notification"
+import { fillScheduleCredits } from "./course-credit"
 import { reloginYSU } from "./relogin"
 import { getYSUMfaMethods, isYSUMfaMethod } from "./types"
 
@@ -165,20 +158,20 @@ function ysuCapabilities(): AcademicCapabilities {
     schedule: true,
     labSchedule: isFeatureAvailable("hasLabSchedule"),
     exams: true,
-    makeupExams: true,
-    laborEducation: getSchoolConfig().ldxt !== undefined,
-    innovationCredits: getSchoolConfig().scxt !== undefined,
-    comprehensiveEval: getSchoolConfig().xgxt !== undefined,
+    makeupExams: false,
+    laborEducation: false,
+    innovationCredits: false,
+    comprehensiveEval: false,
     schoolSchedule: true,
     gpa: true,
     evaluation: true,
     evaluationScorePreview: true,
-    trainingPlan: true,
+    trainingPlan: false,
     studentInfo: true,
     currentWeek: true,
     classPeriods: true,
     termCalendar: true,
-    mobileSignin: isFeatureAvailable("hasMobile"),
+    mobileSignin: false,
   }
 }
 
@@ -339,11 +332,6 @@ export class YSUProvider extends BaseProvider {
   readonly id = "ysu"
   readonly name = "燕山大学"
   readonly capabilities = ysuCapabilities()
-  readonly mobile?: ProviderMobile = this.capabilities.mobileSignin
-    ? new YSUMobileAdapter()
-    : undefined
-  readonly diagnostics = ysuDiagnostics
-  readonly nativeNotification = ysuNativeNotification
 
   protected async onInitialize(): Promise<void> {
     await initializeSession()
@@ -584,9 +572,11 @@ export class YSUProvider extends BaseProvider {
       studentId: ranking.studentId ?? undefined,
       classId: ranking.classId ?? undefined,
       courseCode: ranking.courseCode ?? undefined,
-      score: ranking.score ?? 0,
-      rank: ranking.rank ?? 0,
-      total: ranking.total ?? 0,
+      score:
+        ranking.raw["PMF"] === undefined || ranking.raw["PMF"] === "" ? undefined : ranking.score,
+      rank: ranking.raw["PM"] === undefined || ranking.raw["PM"] === "" ? undefined : ranking.rank,
+      total:
+        ranking.raw["ZRS"] === undefined || ranking.raw["ZRS"] === "" ? undefined : ranking.total,
       rankingType: ranking.rankingType ?? undefined,
       metadata: ranking.raw ?? undefined,
     }
@@ -603,7 +593,8 @@ export class YSUProvider extends BaseProvider {
           courseCategory: options?.courseCategory ?? "all",
         })
       : await querySchedule({ term })
-    return rows.map(mapCourse)
+    const plan = await queryTrainingPlan({ pageSize: 999 }).catch(() => [])
+    return fillScheduleCredits(rows, plan).map(mapCourse)
   }
 
   async getUnscheduledCourses(options?: UnscheduledCourseQueryOptions): Promise<Course[]> {
@@ -718,8 +709,13 @@ export class YSUProvider extends BaseProvider {
     }))
   }
 
-  async signupMakeupExam(input: MakeupExamSignupInput): Promise<void> {
-    await signupMakeupExam({ taskId: input.taskId, batchId: input.batchId })
+  async signupMakeupExam(): Promise<void> {
+    throw new ProviderError(
+      ProviderErrorCode.FEATURE_NOT_SUPPORTED,
+      "燕大课代表第一版是只读客户端，不支持补考报名。",
+      undefined,
+      501
+    )
   }
 
   async getSchoolGradeYears(): Promise<CodeItem[]> {
@@ -1116,7 +1112,7 @@ export class YSUProvider extends BaseProvider {
     )
   }
 
-  async submitEvaluation(input: EvaluationSubmitInput): Promise<void> {
+  async submitEvaluation(input: EvaluationScoreInput): Promise<void> {
     await _submitEvaluation(
       input.groupNo,
       input.wjid,
@@ -1153,8 +1149,12 @@ export class YSUProvider extends BaseProvider {
   }
 
   async recalculateAcademicCompletion(): Promise<AcademicCompletion> {
-    const completion = await recalculateAcademicCompletionImpl()
-    return mapCompletion(completion)
+    throw new ProviderError(
+      ProviderErrorCode.FEATURE_NOT_SUPPORTED,
+      "燕大课代表第一版是只读客户端，不支持重新计算学业完成度。",
+      undefined,
+      501
+    )
   }
 
   async getAcademicWarnings(): Promise<AcademicWarning[]> {

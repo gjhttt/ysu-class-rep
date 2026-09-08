@@ -14,3 +14,35 @@ export function formatTimeRange(start?: string, end?: string): string {
   if (s && e) return `${s} ~ ${e}`
   return s || e
 }
+
+const beijingPartsFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  hourCycle: "h23",
+})
+
+function beijingParts(timestamp: number): Record<string, number> {
+  return Object.fromEntries(
+    beijingPartsFormatter
+      .formatToParts(timestamp)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)])
+  )
+}
+
+export function getBeijingClockMinutes(timestamp = Date.now()): number {
+  const parts = beijingParts(timestamp)
+  return (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+}
+
+export function beijingDayDifference(timestamp: number, now = Date.now()): number {
+  const target = beijingParts(timestamp)
+  const today = beijingParts(now)
+  const targetDay = Date.UTC(target.year, target.month - 1, target.day)
+  const todayDay = Date.UTC(today.year, today.month - 1, today.day)
+  return Math.round((targetDay - todayDay) / 86_400_000)
+}

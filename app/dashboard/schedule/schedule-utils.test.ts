@@ -2,10 +2,23 @@ import { describe, expect, it } from "vitest"
 import type { CurrentWeek, Course } from "@/providers/types"
 import {
   computeWeekDateLabels,
+  findCourseAtSlot,
   resolveInitialScheduleWeek,
   resolveWidgetCurrentWeek,
   isCourseActiveInWeek,
+  lastScheduledWeek,
 } from "./schedule-utils"
+
+describe("lastScheduledWeek", () => {
+  it("uses the last week containing a theory or experimental course", () => {
+    expect(
+      lastScheduledWeek([
+        { name: "理论课", weekDay: 1, startSection: 1, endSection: 2, weekList: [1, 18] },
+        { name: "实验课", weekDay: 2, startSection: 3, endSection: 4, weeks: "2-16周" },
+      ])
+    ).toBe(18)
+  })
+})
 const staleCurrentWeek: CurrentWeek = {
   week: 1,
   weekday: 1,
@@ -124,5 +137,23 @@ describe("isCourseActiveInWeek", () => {
     const noWeeks: Course = { name: "形势与政策", weekDay: 1, startSection: 1, endSection: 2 }
     expect(isCourseActiveInWeek(noWeeks, 5)).toBe(true)
     expect(isCourseActiveInWeek({ ...noWeeks, weeks: "" }, 5)).toBe(true)
+  })
+})
+
+describe("findCourseAtSlot", () => {
+  it("finds only a course active in the requested week, day and section", () => {
+    const courses: Course[] = [
+      {
+        name: "工程制图",
+        weekList: [1, 3],
+        weekDay: 2,
+        startSection: 3,
+        endSection: 4,
+      },
+    ]
+
+    expect(findCourseAtSlot(courses, 3, 2, 4)?.name).toBe("工程制图")
+    expect(findCourseAtSlot(courses, 2, 2, 4)).toBeUndefined()
+    expect(findCourseAtSlot(courses, 3, 1, 4)).toBeUndefined()
   })
 })

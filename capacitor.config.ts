@@ -1,19 +1,20 @@
 import type { CapacitorConfig } from "@capacitor/cli"
+import { APP_CONFIG } from "./lib/app-config"
 
 const config: CapacitorConfig = {
-  appId: "com.youwenqwq.ysuclient",
-  appName: "燕大终端",
+  appId: APP_CONFIG.androidPackage,
+  appName: APP_CONFIG.appName,
   webDir: "dist",
+  loggingBehavior: "none",
+  includePlugins: [
+    "@aparajita/capacitor-secure-storage",
+    "@capacitor/app",
+    "@capacitor/device",
+    "@capacitor/filesystem",
+  ],
   plugins: {
     CapacitorHttp: {
       enabled: true,
-    },
-    CapacitorUpdater: {
-      autoUpdate: false,
-      autoDeleteFailed: true,
-      autoDeletePrevious: true,
-      resetWhenUpdate: true,
-      appReadyTimeout: 15000,
     },
   },
 }

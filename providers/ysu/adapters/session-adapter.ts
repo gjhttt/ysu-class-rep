@@ -2,19 +2,13 @@ import {
   initializeSession as initializeProviderSession,
   resetSession as resetProviderSession,
 } from "../session"
-import { warmupWEU } from "../protocol/jwxt"
-import { ensureMobileAuthorized } from "../protocol/jwmobile"
-import { isFeatureAvailable } from "@/lib/server-config"
 
 export async function initializeSession(): Promise<void> {
   await initializeProviderSession()
 }
 
 export async function warmupSession(): Promise<void> {
-  await warmupWEU()
-  if (isFeatureAvailable("hasMobile")) {
-    ensureMobileAuthorized(true).catch(() => {})
-  }
+  // 第一版按需请求，避免启动时并发预热触发教务系统限流。
 }
 
 export function resetSession(): void {
