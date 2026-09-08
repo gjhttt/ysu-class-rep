@@ -66,6 +66,10 @@ export function releaseToUpdateInfo(
   }
 }
 
+export function isTrustedApkUrl(url: string): boolean {
+  return url.toLowerCase().startsWith("https://github.com/gjhttt/ysu-class-rep/")
+}
+
 export async function checkForUpdate(auto = false): Promise<UpdateInfo> {
   if (!isCapacitor()) return EMPTY_UPDATE
   if (auto) {
@@ -101,7 +105,7 @@ export async function downloadApkInApp(
   info: UpdateInfo,
   onProgress?: (percent: number) => void
 ): Promise<void> {
-  if (!info.apkDownloadUrl.startsWith("https://github.com/GJHTTT/ysu-class-rep/")) {
+  if (!isTrustedApkUrl(info.apkDownloadUrl)) {
     throw new Error("Untrusted APK source")
   }
   const listener = await YsuFile.addListener("downloadProgress", (state) => {
