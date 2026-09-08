@@ -27,7 +27,7 @@ class WebViewCompatPlugin : Plugin() {
         private const val PREF_DISMISSED = "dismissed"
         private const val FULL_VERSION = 119
         private const val MIN_VERSION = 111
-        private const val FAQ_URL = "https://ysu.welain.com/faq"
+        private const val FAQ_URL = "https://github.com/GJHTTT/ysu-class-rep#readme"
         private val WEBVIEW_PACKAGES = listOf(
             "com.google.android.webview",
             "com.android.webview",

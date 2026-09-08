@@ -5,13 +5,13 @@ export interface AnnouncementInfo {
   title: string
   content: string
   level: AnnouncementLevel
-  publishedAt: string
-  expireAt: string
+  publishedAt?: string
+  expireAt?: string
 }
 
 import { getLocalStorageItemWithFallback, STORAGE_KEYS } from "./storage/keys"
+import { APP_CONFIG } from "./app-config"
 
-const ANNOUNCEMENT_URL = "https://ysu.welain.com/updates/announcement.json"
 const LAST_DISMISSED_KEY = STORAGE_KEYS.lastDismissedAnnouncementId
 const LEGACY_LAST_DISMISSED_KEY = STORAGE_KEYS.legacyLastDismissedAnnouncementId
 
@@ -25,7 +25,7 @@ function isFuture(publishedAt: string): boolean {
 
 export async function checkAnnouncement(): Promise<AnnouncementInfo | null> {
   try {
-    const res = await fetch(ANNOUNCEMENT_URL)
+    const res = await fetch(APP_CONFIG.announcementUrl, { cache: "no-store" })
     if (!res.ok) return null
     const data = (await res.json()) as Partial<AnnouncementInfo>
     if (!data.id || !data.title) return null
@@ -36,7 +36,16 @@ export async function checkAnnouncement(): Promise<AnnouncementInfo | null> {
       LEGACY_LAST_DISMISSED_KEY
     )
     if (lastDismissed === data.id) return null
-    return data as AnnouncementInfo
+    return {
+      id: data.id,
+      title: data.title,
+      content: data.content ?? "",
+      level: ["info", "warning", "critical"].includes(data.level ?? "")
+        ? (data.level as AnnouncementLevel)
+        : "info",
+      publishedAt: data.publishedAt,
+      expireAt: data.expireAt,
+    }
   } catch {
     return null
   }

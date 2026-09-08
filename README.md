@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  第一阶段开发中；无真实账号时可使用脱敏 Mock 检查界面
+  Android 本地直连；无真实账号时可使用脱敏 Mock 检查界面
 </p>
 
 ---
@@ -28,10 +28,11 @@
 - 课表与考试查询沿用 Provider 服务层；移动端采用总览、课表、成绩、考试、我的五栏导航。
 - `NEXT_PUBLIC_MOCK_MODE=true` 时只返回明确标识的脱敏 fixture，不请求学校系统。
 - 第一版除手动学生评教外保持只读；评教必须逐题填写、服务端预检并二次确认，不提供自动作答或批量提交。补考报名、完成度重算和移动签到仍被禁用。
+- 启动时从本项目 GitHub 读取公开公告并检查正式 APK 更新；该请求不携带账号、Cookie 或教务数据。
 
 ## 数据来源与安全性
 
-真实教务请求只允许在 Android 端由 Capacitor HTTP 直接连接学校系统。Web 端不会经过第三方代理；请使用 Mock 模式进行浏览器开发。项目未接入统计、广告或第三方分析服务。
+真实教务请求只允许在 Android 端由 Capacitor HTTP 直接连接学校系统。Web 端不会经过第三方代理；请使用 Mock 模式进行浏览器开发。项目未接入统计、广告、远程反馈或第三方分析服务。
 
 认证会话通过 Android 系统安全存储保存；展示缓存只保留必要数据。退出登录会清除当前凭据、记住的密码和展示缓存。源码、日志和 Git 中不得出现真实学号、密码、Cookie、Ticket 或 Token。
 
@@ -64,6 +65,12 @@ Set-Location android
 ```
 
 APK 输出到 `E:\YSU-Study\android\app\build\outputs\apk\debug\app-debug.apk`。也可在项目根目录执行 `pnpm exec cap open android` 后由 Android Studio 构建。不要提交 `.env.local`、签名密钥或本机 SDK 路径。
+
+## 公告与更新
+
+- 公告文件：[`public/updates/announcement.json`](public/updates/announcement.json)。修改 `id` 后提交到 `main`，客户端会在启动时读取。
+- 更新来源：[GitHub Releases](https://github.com/GJHTTT/ysu-class-rep/releases)。正式发布必须附带 `.apk` 文件并使用高于当前版本的 `vX.Y.Z` 标签。
+- Android 会校验安装包签名并要求用户确认安装；本项目不支持静默安装或远程下发网页代码。
 
 ## 相关项目
 

@@ -15,20 +15,14 @@ export const ALL_CAPABILITIES: AcademicCapabilities = {
   schedule: true,
   labSchedule: true,
   exams: true,
-  makeupExams: true,
-  laborEducation: true,
-  innovationCredits: true,
-  comprehensiveEval: true,
   schoolSchedule: true,
   gpa: true,
   evaluation: true,
   evaluationScorePreview: true,
-  trainingPlan: true,
   studentInfo: true,
   currentWeek: true,
   classPeriods: true,
   termCalendar: true,
-  mobileSignin: true,
 }
 
 export const NO_CAPABILITIES: AcademicCapabilities = {
@@ -41,20 +35,14 @@ export const NO_CAPABILITIES: AcademicCapabilities = {
   schedule: false,
   labSchedule: false,
   exams: false,
-  makeupExams: false,
-  laborEducation: false,
-  innovationCredits: false,
-  comprehensiveEval: false,
   schoolSchedule: false,
   gpa: false,
   evaluation: false,
   evaluationScorePreview: false,
-  trainingPlan: false,
   studentInfo: false,
   currentWeek: false,
   classPeriods: false,
   termCalendar: false,
-  mobileSignin: false,
 }
 
 export function hasCapability(

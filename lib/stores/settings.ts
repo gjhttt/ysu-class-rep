@@ -1,6 +1,5 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
-import type { UpdateChannel } from "../updater"
 import { migrateLocalStorageKey, STORAGE_KEYS } from "../storage/keys"
 
 migrateLocalStorageKey(STORAGE_KEYS.settings, STORAGE_KEYS.legacySettings)
@@ -9,21 +8,7 @@ export type CardStyle = "solid" | "translucent" | "glass"
 export type BackgroundStyle = "overlay" | "blur-overlay"
 export type LandingPage = "overview" | "schedule"
 
-export interface FeedbackHistoryItem {
-  id: string
-  rating: number
-  text: string
-  ts: number
-  replied?: boolean
-  replyText?: string
-  repliedAt?: number
-  notifiedAt?: number
-  deleted?: boolean
-}
-
 interface SettingsState {
-  updateMirror: string
-  updateChannel: UpdateChannel
   backgroundImage: string
   backgroundOverlayOpacity: number
   backgroundStyle: BackgroundStyle
@@ -41,7 +26,6 @@ interface SettingsState {
   schoolId: string
   scheduleCompactMode: boolean
   gpaVisible: boolean
-  gradeGachaEnabled: boolean
   notifyEnabled: boolean
   notifyCheckInterval: number
   notifyGrades: boolean
@@ -50,14 +34,7 @@ interface SettingsState {
   classReminderEnabled: boolean
   classReminderMinutes: number
   classReminderDays: number
-  analyticsConsent: boolean
-  lastAnalyticsDate: string
-  analyticsPromptVersion: string
-  feedbackIds: string[]
-  feedbackHistory: FeedbackHistoryItem[]
   hasHydrated: boolean
-  setUpdateMirror: (mirror: string) => void
-  setUpdateChannel: (channel: UpdateChannel) => void
   setBackgroundImage: (image: string) => void
   setBackgroundOverlayOpacity: (opacity: number) => void
   setBackgroundStyle: (style: BackgroundStyle) => void
@@ -75,7 +52,6 @@ interface SettingsState {
   setSchoolId: (id: string) => void
   setScheduleCompactMode: (v: boolean) => void
   setGpaVisible: (v: boolean) => void
-  setGradeGachaEnabled: (v: boolean) => void
   setNotifyEnabled: (v: boolean) => void
   setNotifyCheckInterval: (v: number) => void
   setNotifyGrades: (v: boolean) => void
@@ -84,19 +60,12 @@ interface SettingsState {
   setClassReminderEnabled: (v: boolean) => void
   setClassReminderMinutes: (v: number) => void
   setClassReminderDays: (v: number) => void
-  setAnalyticsConsent: (v: boolean) => void
-  setLastAnalyticsDate: (v: string) => void
-  setAnalyticsPromptVersion: (v: string) => void
-  setFeedbackIds: (ids: string[]) => void
-  setFeedbackHistory: (items: FeedbackHistoryItem[]) => void
   setHasHydrated: (v: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      updateMirror: "https://ysu.welain.com/updates/",
-      updateChannel: "stable",
       backgroundImage: "",
       backgroundOverlayOpacity: 75,
       backgroundStyle: "overlay",
@@ -114,7 +83,6 @@ export const useSettingsStore = create<SettingsState>()(
       schoolId: "ysu",
       scheduleCompactMode: false,
       gpaVisible: false,
-      gradeGachaEnabled: true,
       notifyEnabled: false,
       notifyCheckInterval: 60,
       notifyGrades: true,
@@ -123,14 +91,7 @@ export const useSettingsStore = create<SettingsState>()(
       classReminderEnabled: false,
       classReminderMinutes: 15,
       classReminderDays: 7,
-      analyticsConsent: false,
-      lastAnalyticsDate: "",
-      analyticsPromptVersion: "",
-      feedbackIds: [],
-      feedbackHistory: [],
       hasHydrated: false,
-      setUpdateMirror: (updateMirror) => set({ updateMirror }),
-      setUpdateChannel: (updateChannel) => set({ updateChannel }),
       setBackgroundImage: (backgroundImage) => set({ backgroundImage }),
       setBackgroundOverlayOpacity: (backgroundOverlayOpacity) => set({ backgroundOverlayOpacity }),
       setBackgroundStyle: (backgroundStyle) => set({ backgroundStyle }),
@@ -149,7 +110,6 @@ export const useSettingsStore = create<SettingsState>()(
       setSchoolId: (schoolId) => set({ schoolId }),
       setScheduleCompactMode: (scheduleCompactMode) => set({ scheduleCompactMode }),
       setGpaVisible: (gpaVisible) => set({ gpaVisible }),
-      setGradeGachaEnabled: (gradeGachaEnabled) => set({ gradeGachaEnabled }),
       setNotifyEnabled: (notifyEnabled) => set({ notifyEnabled }),
       setNotifyCheckInterval: (notifyCheckInterval) => set({ notifyCheckInterval }),
       setNotifyGrades: (notifyGrades) => set({ notifyGrades }),
@@ -158,11 +118,6 @@ export const useSettingsStore = create<SettingsState>()(
       setClassReminderEnabled: (classReminderEnabled) => set({ classReminderEnabled }),
       setClassReminderMinutes: (classReminderMinutes) => set({ classReminderMinutes }),
       setClassReminderDays: (classReminderDays) => set({ classReminderDays }),
-      setAnalyticsConsent: (analyticsConsent) => set({ analyticsConsent }),
-      setLastAnalyticsDate: (lastAnalyticsDate) => set({ lastAnalyticsDate }),
-      setAnalyticsPromptVersion: (analyticsPromptVersion) => set({ analyticsPromptVersion }),
-      setFeedbackIds: (feedbackIds) => set({ feedbackIds }),
-      setFeedbackHistory: (feedbackHistory) => set({ feedbackHistory }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
     }),
     {

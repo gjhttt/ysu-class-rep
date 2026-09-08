@@ -2,29 +2,11 @@
 
 import { useProvider } from "../use-provider"
 import type {
-  AcademicCompletion,
-  AcademicWarning,
   ClassPeriod,
   ClassroomInfo,
   ClassroomQueryOptions,
   CodeItem,
-  ComprehensiveIndicatorDetail,
-  ComprehensiveQueryOptions,
-  ComprehensiveRadarItem,
-  ComprehensiveReportPage,
-  ComprehensiveReportYears,
-  ComprehensiveResult,
-  ComprehensiveTerm,
-  ComprehensiveYearScore,
-  CatalogPage,
-  CatalogQueryOptions,
-  Competition,
   Course,
-  CreditBatch,
-  CreditDeclaration,
-  CreditQueryOptions,
-  CreditRecord,
-  CreditSummary,
   CurrentWeek,
   CurrentWeekQueryOptions,
   Exam,
@@ -38,21 +20,12 @@ import type {
   GradeRanking,
   GradeRankingQueryOptions,
   GradeStatistics,
-  LaborRecord,
-  LaborSummary,
-  LibraryActivity,
-  EnrollableActivity,
   MajorInfo,
-  MakeupExamBatch,
-  MakeupExamCourse,
-  MakeupExamCourseQueryOptions,
-  PageQueryOptions,
   ScheduleQueryOptions,
   SchoolClassInfo,
   SchoolClassQueryOptions,
   TermCalendar,
   TermCalendarQueryOptions,
-  TrainingPlan,
 } from "../types"
 import { useProviderQuery, type ProviderQueryResult } from "./use-provider-query"
 
@@ -60,7 +33,6 @@ export function useGrades(options?: GradeQueryOptions): ProviderQueryResult<Grad
   const provider = useProvider()
   return useProviderQuery("grades", "grades", () => provider.getGrades(options), options)
 }
-
 export function useGPAStats(options?: GPAQueryOptions): ProviderQueryResult<GPAStats> {
   const provider = useProvider()
   return useProviderQuery("gpa", "gpa-stats", () => provider.getGPAStats(options), options)
@@ -139,180 +111,6 @@ export function useCurrentWeek(
 export function useExams(options?: ExamQueryOptions): ProviderQueryResult<Exam[]> {
   const provider = useProvider()
   return useProviderQuery("exams", "exams", () => provider.getExams(options), options)
-}
-
-export function useMakeupExamBatches(
-  options?: ExamQueryOptions
-): ProviderQueryResult<MakeupExamBatch[]> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "makeupExams",
-    "makeup-exam-batches",
-    () => provider.getMakeupExamBatches(options),
-    options
-  )
-}
-
-export function useMakeupExamCourses(
-  options?: MakeupExamCourseQueryOptions,
-  enabled = true
-): ProviderQueryResult<MakeupExamCourse[]> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "makeupExams",
-    "makeup-exam-courses",
-    () => provider.getMakeupExamCourses(options),
-    options,
-    undefined,
-    enabled
-  )
-}
-
-export function useLaborRecords(): ProviderQueryResult<LaborRecord[]> {
-  const provider = useProvider()
-  return useProviderQuery("laborEducation", "labor-records", () => provider.getLaborRecords())
-}
-
-export function useLaborSummary(): ProviderQueryResult<LaborSummary> {
-  const provider = useProvider()
-  return useProviderQuery("laborEducation", "labor-summary", () => provider.getLaborSummary())
-}
-
-export function useLaborActivities(): ProviderQueryResult<EnrollableActivity[]> {
-  const provider = useProvider()
-  return useProviderQuery("laborEducation", "labor-activities", () => provider.getLaborActivities())
-}
-
-export function useCreditBatches(): ProviderQueryResult<CreditBatch[]> {
-  const provider = useProvider()
-  return useProviderQuery("innovationCredits", "credit-batches", () => provider.getCreditBatches())
-}
-
-export function useCreditDeclarations(
-  options?: CreditQueryOptions
-): ProviderQueryResult<CreditDeclaration[]> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "innovationCredits",
-    "credit-declarations",
-    () => provider.getCreditDeclarations(options),
-    options
-  )
-}
-
-export function useCreditRecords(
-  options?: CreditQueryOptions & { all?: boolean }
-): ProviderQueryResult<CreditRecord[]> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "innovationCredits",
-    "credit-records",
-    () => (options?.all ? provider.getAllCreditRecords() : provider.getCreditRecords(options)),
-    options
-  )
-}
-
-export function useCreditSummary(): ProviderQueryResult<CreditSummary> {
-  const provider = useProvider()
-  return useProviderQuery("innovationCredits", "credit-summary", () => provider.getCreditSummary())
-}
-
-export function useCreditCompetitions(
-  options?: CatalogQueryOptions
-): ProviderQueryResult<CatalogPage<Competition>> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "innovationCredits",
-    "credit-competitions",
-    () => provider.getCreditCompetitions(options),
-    options
-  )
-}
-
-export function useCreditLibraryActivities(
-  options?: CatalogQueryOptions
-): ProviderQueryResult<CatalogPage<LibraryActivity>> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "innovationCredits",
-    "credit-library-activities",
-    () => provider.getCreditLibraryActivities(options),
-    options
-  )
-}
-
-export function useComprehensiveTerms(): ProviderQueryResult<ComprehensiveTerm[]> {
-  const provider = useProvider()
-  return useProviderQuery("comprehensiveEval", "comprehensive-terms", () =>
-    provider.getComprehensiveTerms()
-  )
-}
-
-export function useComprehensiveResult(
-  options?: ComprehensiveQueryOptions
-): ProviderQueryResult<ComprehensiveResult> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "comprehensiveEval",
-    "comprehensive-result",
-    () => provider.getComprehensiveResult(options),
-    options
-  )
-}
-
-export function useComprehensiveIndicators(
-  options?: ComprehensiveQueryOptions
-): ProviderQueryResult<ComprehensiveIndicatorDetail[]> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "comprehensiveEval",
-    "comprehensive-indicators",
-    () => provider.getComprehensiveIndicators(options),
-    options
-  )
-}
-
-export function useComprehensiveRadar(
-  options?: ComprehensiveQueryOptions
-): ProviderQueryResult<ComprehensiveRadarItem[]> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "comprehensiveEval",
-    "comprehensive-radar",
-    () => provider.getComprehensiveRadar(options),
-    options
-  )
-}
-
-export function useComprehensiveYearScores(): ProviderQueryResult<ComprehensiveYearScore[]> {
-  const provider = useProvider()
-  return useProviderQuery("comprehensiveEval", "comprehensive-year-scores", () =>
-    provider.getComprehensiveYearScores()
-  )
-}
-
-export function useComprehensiveReportYears(): ProviderQueryResult<ComprehensiveReportYears> {
-  const provider = useProvider()
-  return useProviderQuery("comprehensiveEval", "comprehensive-report-years", () =>
-    provider.getComprehensiveReportYears()
-  )
-}
-
-export function useComprehensiveReport(
-  options?: {
-    year?: string
-  },
-  enabled = true
-): ProviderQueryResult<ComprehensiveReportPage> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "comprehensiveEval",
-    "comprehensive-report",
-    () => provider.getComprehensiveReport(options),
-    options,
-    undefined,
-    enabled
-  )
 }
 
 export function useSchoolGradeYears(): ProviderQueryResult<CodeItem[]> {
@@ -404,24 +202,3 @@ export function useSchoolClassroomSchedule(
   )
 }
 
-export function useTrainingPlan(options?: PageQueryOptions): ProviderQueryResult<TrainingPlan[]> {
-  const provider = useProvider()
-  return useProviderQuery(
-    "trainingPlan",
-    "training-plan",
-    () => provider.getTrainingPlan(options),
-    options
-  )
-}
-
-export function useAcademicCompletion(): ProviderQueryResult<AcademicCompletion> {
-  const provider = useProvider()
-  return useProviderQuery("trainingPlan", "academic-completion", () =>
-    provider.getAcademicCompletion()
-  )
-}
-
-export function useAcademicWarnings(): ProviderQueryResult<AcademicWarning[]> {
-  const provider = useProvider()
-  return useProviderQuery("trainingPlan", "academic-warnings", () => provider.getAcademicWarnings())
-}

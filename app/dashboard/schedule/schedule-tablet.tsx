@@ -29,7 +29,6 @@ import {
 } from "./schedule-utils"
 import { courseBgClass, type CourseColorMap } from "./course-color"
 import { ActivityModal } from "./activity-modal"
-import { SigninModal } from "./signin-modal"
 
 interface Props {
   courses: Course[]
@@ -70,9 +69,6 @@ export function ScheduleTablet({
   const [examDialog, setExamDialog] = useState<ExamBlock | null>(null)
   const [activityCourse, setActivityCourse] = useState<Course | null>(null)
   const [activityOpen, setActivityOpen] = useState(false)
-  const [signinActivityId, setSigninActivityId] = useState<string | null>(null)
-  const [signinType, setSigninType] = useState(1)
-  const [signinOpen, setSigninOpen] = useState(false)
 
   const isCurrentWeek = currentWeek?.week === selectedWeek
   const timeMap = useMemo(() => buildSectionTimeMap(periods), [periods])
@@ -403,18 +399,6 @@ export function ScheduleTablet({
         week={selectedWeek}
         open={activityOpen}
         onOpenChange={setActivityOpen}
-        onSigninActivity={(id, type) => {
-          setSigninActivityId(id)
-          setSigninType(type)
-          setSigninOpen(true)
-        }}
-      />
-
-      <SigninModal
-        activityId={signinActivityId}
-        signinType={signinType}
-        open={signinOpen}
-        onOpenChange={setSigninOpen}
       />
     </>
   )

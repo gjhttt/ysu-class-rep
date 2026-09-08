@@ -6,6 +6,8 @@
   "scheme": "ysustudy",
   "storagePrefix": "ysu-study",
   "version": "0.1.0",
-  "repositoryUrl": "",
+  "repositoryUrl": "https://github.com/GJHTTT/ysu-class-rep",
+  "announcementUrl": "https://raw.githubusercontent.com/GJHTTT/ysu-class-rep/main/public/updates/announcement.json",
+  "releasesApiUrl": "https://api.github.com/repos/GJHTTT/ysu-class-rep/releases/latest",
   "upstreamUrl": "https://github.com/Youwenqwq/ysu-client"
 }

@@ -16,7 +16,6 @@ interface Props {
   week: number
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSigninActivity?: (activityId: string, signinType: number) => void
 }
 
 export function ActivityModal({ course, open, onOpenChange }: Props) {

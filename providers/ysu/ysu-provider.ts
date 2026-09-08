@@ -1,34 +1,15 @@
-import type { AcademicCompletion as ProtocolAcademicCompletion } from "./protocol/jwxt"
 import { useAuthStore } from "@/lib/stores/auth"
 import { isFeatureAvailable } from "@/lib/server-config"
 import { BaseProvider } from "../base-provider"
 import { ProviderError, ProviderErrorCode } from "../errors"
 import type {
   AcademicCapabilities,
-  AcademicCompletion,
-  AcademicWarning,
   AuthStatus,
   ClassPeriod,
   ClassroomInfo,
   ClassroomQueryOptions,
   CodeItem,
-  ComprehensiveIndicatorDetail,
-  ComprehensiveQueryOptions,
-  ComprehensiveRadarItem,
-  ComprehensiveReportPage,
-  ComprehensiveReportYears,
-  ComprehensiveResult,
-  ComprehensiveTerm,
-  ComprehensiveYearScore,
   Course,
-  CatalogPage,
-  CatalogQueryOptions,
-  Competition,
-  CreditBatch,
-  CreditDeclaration,
-  CreditQueryOptions,
-  CreditRecord,
-  CreditSummary,
   Credential,
   CurrentWeek,
   EvaluationAnswer,
@@ -48,20 +29,12 @@ import type {
   GradeRanking,
   GradeRankingQueryOptions,
   GradeStatistics,
-  LaborRecord,
-  LaborSummary,
-  LibraryActivity,
-  EnrollableActivity,
   LoginStep1Input,
   LoginStep1Result,
   MfaChallenge,
   MfaRequestInput,
   MfaSubmitInput,
   MajorInfo,
-  MakeupExamBatch,
-  MakeupExamCourse,
-  MakeupExamCourseQueryOptions,
-  PageQueryOptions,
   ScheduleQueryOptions,
   SchoolClassInfo,
   SchoolClassQueryOptions,
@@ -69,8 +42,6 @@ import type {
   TermCalendar,
   TermCalendarQueryOptions,
   TermQueryOptions,
-  TrainingPlan,
-  UnscheduledCourseQueryOptions,
   WechatMfaContext,
   WechatQrPollResult,
 } from "../types"
@@ -90,15 +61,11 @@ import {
 } from "./cas-auth"
 import {
   calculateEvaluationScore as _calculateEvaluationScore,
-  queryAcademicCompletion,
-  queryAcademicWarnings,
   queryClassPeriods,
   queryCurrentWeek,
   queryEvaluationDetail,
   queryEvaluationTypes,
   queryExams,
-  queryMakeupExamBatches,
-  queryMakeupExamCourses,
   queryGradeYears,
   queryDepartments,
   queryMajors,
@@ -119,29 +86,8 @@ import {
   queryStudentInfo,
   queryTermCalendar,
   queryTrainingPlan,
-  queryUnscheduledCourses,
   submitEvaluation as _submitEvaluation,
 } from "./emap-fetcher"
-import { queryEnrollableActivities, queryLaborRecords, queryLaborSummary } from "./ldxt-fetcher"
-import {
-  queryAllCreditRecords,
-  queryCompetitions,
-  queryCreditBatches,
-  queryCreditDeclarations,
-  queryCreditRecords,
-  queryCreditSummary,
-  queryLibraryActivities,
-} from "./scxt-fetcher"
-import {
-  queryAcademicReport,
-  queryAcademicReportYears,
-  queryEvaluationIndicators,
-  queryEvaluationRadar,
-  queryEvaluationResult,
-  queryEvaluationTerms,
-  queryYearScoreStatics,
-} from "./xgxt-fetcher"
-import type { CreditRecord as ScxtCreditRecord } from "./protocol/scxt"
 import { initializeSession, resetSession, warmupSession } from "./adapters/session-adapter"
 import { fillScheduleCredits } from "./course-credit"
 import { reloginYSU } from "./relogin"
@@ -158,20 +104,14 @@ function ysuCapabilities(): AcademicCapabilities {
     schedule: true,
     labSchedule: isFeatureAvailable("hasLabSchedule"),
     exams: true,
-    makeupExams: false,
-    laborEducation: false,
-    innovationCredits: false,
-    comprehensiveEval: false,
     schoolSchedule: true,
     gpa: true,
     evaluation: true,
     evaluationScorePreview: true,
-    trainingPlan: false,
     studentInfo: true,
     currentWeek: true,
     classPeriods: true,
     termCalendar: true,
-    mobileSignin: false,
   }
 }
 
@@ -295,36 +235,6 @@ function mapEvaluationAnswer(answer: EvaluationAnswer) {
     questionType: answer.questionType ?? "",
     optionIds: answer.optionIds ?? [],
     text: answer.text ?? "",
-  }
-}
-
-function mapCreditRecord(row: ScxtCreditRecord): CreditRecord {
-  return {
-    itemName: row.itemName,
-    year: row.year || undefined,
-    categoryMajor: row.categoryMajor || undefined,
-    categoryMinor: row.categoryMinor || undefined,
-    awardLevel: row.awardLevel || undefined,
-    referenceScore: row.referenceScore ?? undefined,
-    actualScore: row.actualScore ?? undefined,
-    grade: row.grade || undefined,
-    batch: row.batch || undefined,
-    status: row.status || undefined,
-    raw: row.raw,
-  }
-}
-
-function mapCompletion(completion: ProtocolAcademicCompletion): AcademicCompletion {
-  return {
-    planName: completion.planName ?? undefined,
-    totalRequired: completion.totalRequired ?? undefined,
-    numericTotalRequired: completion.numericTotalRequired,
-    completed: completion.completed ?? undefined,
-    numericCompleted: completion.numericCompleted,
-    elective: completion.elective ?? undefined,
-    numericElective: completion.numericElective,
-    passed: completion.passed ?? false,
-    lastCalculatedAt: completion.lastCalculatedAt || undefined,
   }
 }
 
@@ -597,15 +507,6 @@ export class YSUProvider extends BaseProvider {
     return fillScheduleCredits(rows, plan).map(mapCourse)
   }
 
-  async getUnscheduledCourses(options?: UnscheduledCourseQueryOptions): Promise<Course[]> {
-    if (!this.capabilities.labSchedule) return []
-    const rows = await queryUnscheduledCourses({
-      term: options?.semester,
-      courseCategory: options?.courseCategory ?? "all",
-    })
-    return rows.map(mapCourse)
-  }
-
   async getClassPeriods(): Promise<ClassPeriod[]> {
     const rows = await queryClassPeriods()
     return rows.map((row) => ({
@@ -669,53 +570,6 @@ export class YSUProvider extends BaseProvider {
       seatNumber: row.seatNumber ?? undefined,
       raw: row.raw ?? undefined,
     }))
-  }
-
-  async getMakeupExamBatches(options?: ExamQueryOptions): Promise<MakeupExamBatch[]> {
-    const rows = await queryMakeupExamBatches({ term: options?.semester })
-    return rows.map((row) => ({
-      name: row.name,
-      batchId: row.batchId,
-      term: row.term,
-      signupStart: row.signupStart || undefined,
-      signupEnd: row.signupEnd || undefined,
-      availableCount: row.availableCount,
-      registeredCount: row.registeredCount,
-      raw: row.raw,
-    }))
-  }
-
-  async getMakeupExamCourses(options?: MakeupExamCourseQueryOptions): Promise<MakeupExamCourse[]> {
-    const rows = await queryMakeupExamCourses({
-      term: options?.semester,
-      batchId: options?.batchId,
-      registered: options?.registered,
-    })
-    return rows.map((row) => ({
-      name: row.name,
-      code: row.code || undefined,
-      credit: row.credit || undefined,
-      hours: row.hours || undefined,
-      examSeq: row.examSeq || undefined,
-      department: row.department || undefined,
-      status: row.status || undefined,
-      isAvailable: row.isAvailable,
-      signupStart: row.signupStart || undefined,
-      signupEnd: row.signupEnd || undefined,
-      batchId: row.batchId || undefined,
-      taskId: row.taskId || undefined,
-      note: row.note || undefined,
-      raw: row.raw,
-    }))
-  }
-
-  async signupMakeupExam(): Promise<void> {
-    throw new ProviderError(
-      ProviderErrorCode.FEATURE_NOT_SUPPORTED,
-      "燕大课代表第一版是只读客户端，不支持补考报名。",
-      undefined,
-      501
-    )
   }
 
   async getSchoolGradeYears(): Promise<CodeItem[]> {
@@ -797,247 +651,6 @@ export class YSUProvider extends BaseProvider {
   async getSchoolClassroomSchedule(code: string, options?: ExamQueryOptions): Promise<Course[]> {
     const rows = await queryClassroomSchedule(code, { term: options?.semester })
     return rows.map(mapCourse)
-  }
-
-  async getLaborRecords(): Promise<LaborRecord[]> {
-    const rows = await queryLaborRecords()
-    return rows.map((row) => ({
-      term: row.term,
-      name: row.name,
-      enrollType: row.enrollType || undefined,
-      category: row.category || undefined,
-      department: row.department || undefined,
-      timeStart: row.timeStart || undefined,
-      timeEnd: row.timeEnd || undefined,
-      teacher: row.teacher || undefined,
-      hours: row.hours ?? undefined,
-      status: row.status || undefined,
-      raw: row.raw,
-    }))
-  }
-
-  async getLaborSummary(): Promise<LaborSummary> {
-    const row = await queryLaborSummary()
-    return {
-      studentId: row.studentId || undefined,
-      name: row.name || undefined,
-      department: row.department || undefined,
-      major: row.major || undefined,
-      className: row.className || undefined,
-      grade: row.grade || undefined,
-      schooling: row.schooling || undefined,
-      totalHours: row.totalHours ?? undefined,
-      totalCredits: row.totalCredits ?? undefined,
-      raw: row.raw,
-    }
-  }
-
-  async getLaborActivities(): Promise<EnrollableActivity[]> {
-    const rows = await queryEnrollableActivities()
-    return rows.map((row) => ({
-      name: row.name,
-      category: row.category || undefined,
-      timeStart: row.timeStart || undefined,
-      timeEnd: row.timeEnd || undefined,
-      location: row.location || undefined,
-      hours: row.hours ?? undefined,
-      description: row.description || undefined,
-      department: row.department || undefined,
-      enrollStart: row.enrollStart || undefined,
-      enrollEnd: row.enrollEnd || undefined,
-      isEnrolled: row.isEnrolled,
-      operation: row.operation || undefined,
-      raw: row.raw,
-    }))
-  }
-
-  async getCreditBatches(): Promise<CreditBatch[]> {
-    const rows = await queryCreditBatches()
-    return rows.map((row) => ({ batchId: row.batchId, name: row.name }))
-  }
-
-  async getCreditDeclarations(options?: CreditQueryOptions): Promise<CreditDeclaration[]> {
-    const rows = await queryCreditDeclarations({
-      batchId: options?.batchId,
-      itemName: options?.itemName,
-    })
-    return rows.map((row) => ({
-      itemName: row.itemName,
-      categoryMajor: row.categoryMajor || undefined,
-      categoryMinor: row.categoryMinor || undefined,
-      awardLevel: row.awardLevel || undefined,
-      score: row.score ?? undefined,
-      batch: row.batch || undefined,
-      status: row.status || undefined,
-      operation: row.operation || undefined,
-      raw: row.raw,
-    }))
-  }
-
-  async getCreditRecords(options?: CreditQueryOptions): Promise<CreditRecord[]> {
-    const rows = await queryCreditRecords({
-      batchId: options?.batchId,
-      itemName: options?.itemName,
-    })
-    return rows.map(mapCreditRecord)
-  }
-
-  async getAllCreditRecords(): Promise<CreditRecord[]> {
-    const rows = await queryAllCreditRecords()
-    return rows.map(mapCreditRecord)
-  }
-
-  async getCreditSummary(): Promise<CreditSummary> {
-    const row = await queryCreditSummary()
-    return {
-      studentId: row.studentId || undefined,
-      name: row.name || undefined,
-      department: row.department || undefined,
-      major: row.major || undefined,
-      className: row.className || undefined,
-      gradeYear: row.gradeYear || undefined,
-      grade: row.grade || undefined,
-      totalCredits: row.totalCredits ?? undefined,
-      raw: row.raw,
-    }
-  }
-
-  async getCreditCompetitions(options?: CatalogQueryOptions): Promise<CatalogPage<Competition>> {
-    const page = await queryCompetitions({
-      itemName: options?.keyword,
-      pageIndex: options?.pageIndex,
-    })
-    return {
-      items: page.items.map((row) => ({
-        code: row.code,
-        name: row.name,
-        categoryMajor: row.categoryMajor || undefined,
-        categoryMinor: row.categoryMinor || undefined,
-        isEnabled: row.isEnabled,
-        status: row.status || undefined,
-        raw: row.raw,
-      })),
-      pageIndex: page.pageIndex,
-      totalPages: page.totalPages,
-      totalRecords: page.totalRecords,
-    }
-  }
-
-  async getCreditLibraryActivities(
-    options?: CatalogQueryOptions
-  ): Promise<CatalogPage<LibraryActivity>> {
-    const page = await queryLibraryActivities({
-      name: options?.keyword,
-      pageIndex: options?.pageIndex,
-    })
-    return {
-      items: page.items.map((row) => ({
-        name: row.name,
-        organizer: row.organizer || undefined,
-        category: row.category || undefined,
-        detail: row.detail || undefined,
-        raw: row.raw,
-      })),
-      pageIndex: page.pageIndex,
-      totalPages: page.totalPages,
-      totalRecords: page.totalRecords,
-    }
-  }
-
-  async getComprehensiveTerms(): Promise<ComprehensiveTerm[]> {
-    const rows = await queryEvaluationTerms()
-    return rows.map((row) => ({
-      year: row.year,
-      term: row.term,
-      yearDisplay: row.yearDisplay,
-      termDisplay: row.termDisplay,
-    }))
-  }
-
-  async getComprehensiveResult(options?: ComprehensiveQueryOptions): Promise<ComprehensiveResult> {
-    const row = await queryEvaluationResult(options?.year, options?.term)
-    return {
-      totalScore: row.totalScore,
-      classRank: row.classRank,
-      classSize: row.classSize,
-      gradeRank: row.gradeRank,
-      gradeSize: row.gradeSize,
-      year: row.year,
-      term: row.term,
-      yearDisplay: row.yearDisplay || undefined,
-      termDisplay: row.termDisplay || undefined,
-      indicators: row.indicators.map((ind) => ({
-        name: ind.name,
-        score: ind.score,
-        rank: ind.rank,
-        maxScore: ind.maxScore || undefined,
-      })),
-    }
-  }
-
-  async getComprehensiveIndicators(
-    options?: ComprehensiveQueryOptions
-  ): Promise<ComprehensiveIndicatorDetail[]> {
-    const rows = await queryEvaluationIndicators(options?.year, options?.term)
-    return rows.map((row) => ({
-      name: row.name,
-      score: row.score,
-      maxScore: row.maxScore || undefined,
-      rangeText: row.rangeText || undefined,
-      proportion: row.proportion || undefined,
-      categoryDisplay: row.categoryDisplay || undefined,
-      description: row.description || undefined,
-    }))
-  }
-
-  async getComprehensiveRadar(
-    options?: ComprehensiveQueryOptions
-  ): Promise<ComprehensiveRadarItem[]> {
-    const rows = await queryEvaluationRadar(options?.year, options?.term)
-    return rows.map((row) => ({
-      name: row.name,
-      personal: row.personal,
-      average: row.average,
-      maxScore: row.maxScore,
-    }))
-  }
-
-  async getComprehensiveYearScores(): Promise<ComprehensiveYearScore[]> {
-    const rows = await queryYearScoreStatics()
-    return rows.map((row) => ({
-      year: row.year,
-      term: row.term,
-      yearDisplay: row.yearDisplay || undefined,
-      termDisplay: row.termDisplay || undefined,
-      score: row.score,
-    }))
-  }
-
-  async getComprehensiveReportYears(): Promise<ComprehensiveReportYears> {
-    const data = await queryAcademicReportYears()
-    return {
-      years: data.years.map((y) => ({
-        year: y.year,
-        yearDisplay: y.yearDisplay,
-      })),
-      defaultYear: data.defaultYear,
-    }
-  }
-
-  async getComprehensiveReport(options?: { year?: string }): Promise<ComprehensiveReportPage> {
-    const page = await queryAcademicReport(options?.year)
-    return {
-      entries: page.entries.map((entry) => ({
-        courseName: entry.courseName,
-        score: entry.score,
-        credit: entry.credit || undefined,
-        year: entry.year || undefined,
-        term: entry.term || undefined,
-      })),
-      totalSize: page.totalSize,
-      pageNumber: page.pageNumber,
-      pageSize: page.pageSize,
-    }
   }
 
   async getEvaluationTypes(options?: TermQueryOptions): Promise<EvaluationType[]> {
@@ -1125,45 +738,5 @@ export class YSUProvider extends BaseProvider {
         sequence: input.sequence,
       }
     )
-  }
-
-  async getTrainingPlan(options?: PageQueryOptions): Promise<TrainingPlan[]> {
-    const rows = await queryTrainingPlan({
-      pageSize: options?.pageSize,
-      pageNumber: options?.pageNumber,
-    })
-    return rows.map((row) => ({
-      courseName: row.courseName ?? "",
-      courseCode: row.courseCode ?? undefined,
-      credit: row.credit ?? undefined,
-      courseType: row.courseType ?? undefined,
-      required: row.required ?? false,
-      term: row.term ?? undefined,
-      courseGroup: row.courseGroup ?? undefined,
-    }))
-  }
-
-  async getAcademicCompletion(): Promise<AcademicCompletion> {
-    const completion = await queryAcademicCompletion()
-    return mapCompletion(completion)
-  }
-
-  async recalculateAcademicCompletion(): Promise<AcademicCompletion> {
-    throw new ProviderError(
-      ProviderErrorCode.FEATURE_NOT_SUPPORTED,
-      "燕大课代表第一版是只读客户端，不支持重新计算学业完成度。",
-      undefined,
-      501
-    )
-  }
-
-  async getAcademicWarnings(): Promise<AcademicWarning[]> {
-    const rows = await queryAcademicWarnings()
-    return rows.map((row) => ({
-      warningType: row.warningType ?? "",
-      warningLevel: row.warningLevel ?? undefined,
-      description: row.description ?? undefined,
-      term: row.term ?? undefined,
-    }))
   }
 }

@@ -16,11 +16,7 @@ const eslintConfig = defineConfig([
     "dist/**",
     "android/app/build/**",
     "android/app/src/main/assets/public/**",
-    // Separate project
-    "website/**",
-	// Configs
-	".edgeone/**",
-	"docs/**",
+    "docs/**",
   ]),
   {
     rules: {

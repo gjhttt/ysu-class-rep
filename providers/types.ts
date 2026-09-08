@@ -17,20 +17,14 @@ export interface AcademicCapabilities {
   schedule: boolean
   labSchedule: boolean
   exams: boolean
-  makeupExams: boolean
-  laborEducation: boolean
-  innovationCredits: boolean
-  comprehensiveEval: boolean
   schoolSchedule: boolean
   gpa: boolean
   evaluation: boolean
   evaluationScorePreview: boolean
-  trainingPlan: boolean
   studentInfo: boolean
   currentWeek: boolean
   classPeriods: boolean
   termCalendar: boolean
-  mobileSignin: boolean
 }
 
 /** Login credential supplied by the user. */
@@ -913,34 +907,11 @@ export interface ProviderAcademics {
   getGradeDistribution(options?: GradeAnalyticsQueryOptions): Promise<GradeDistribution[]>
   getGradeRanking(options?: GradeRankingQueryOptions): Promise<GradeRanking>
   getSchedule(options?: ScheduleQueryOptions): Promise<Course[]>
-  getUnscheduledCourses(options?: UnscheduledCourseQueryOptions): Promise<Course[]>
   getClassPeriods(): Promise<ClassPeriod[]>
   getTermCalendar(options?: TermCalendarQueryOptions): Promise<TermCalendar>
   getCurrentWeek(options?: CurrentWeekQueryOptions): Promise<CurrentWeek>
   getCurrentWeekNumber(options?: CurrentWeekQueryOptions): Promise<number>
   getExams(options?: ExamQueryOptions): Promise<Exam[]>
-  getMakeupExamBatches(options?: ExamQueryOptions): Promise<MakeupExamBatch[]>
-  getMakeupExamCourses(options?: MakeupExamCourseQueryOptions): Promise<MakeupExamCourse[]>
-  signupMakeupExam(input: MakeupExamSignupInput): Promise<void>
-  getLaborRecords(): Promise<LaborRecord[]>
-  getLaborSummary(): Promise<LaborSummary>
-  getLaborActivities(): Promise<EnrollableActivity[]>
-  getCreditBatches(): Promise<CreditBatch[]>
-  getCreditDeclarations(options?: CreditQueryOptions): Promise<CreditDeclaration[]>
-  getCreditRecords(options?: CreditQueryOptions): Promise<CreditRecord[]>
-  getAllCreditRecords(): Promise<CreditRecord[]>
-  getCreditSummary(): Promise<CreditSummary>
-  getCreditCompetitions(options?: CatalogQueryOptions): Promise<CatalogPage<Competition>>
-  getCreditLibraryActivities(options?: CatalogQueryOptions): Promise<CatalogPage<LibraryActivity>>
-  getComprehensiveTerms(): Promise<ComprehensiveTerm[]>
-  getComprehensiveResult(options?: ComprehensiveQueryOptions): Promise<ComprehensiveResult>
-  getComprehensiveIndicators(
-    options?: ComprehensiveQueryOptions
-  ): Promise<ComprehensiveIndicatorDetail[]>
-  getComprehensiveRadar(options?: ComprehensiveQueryOptions): Promise<ComprehensiveRadarItem[]>
-  getComprehensiveYearScores(): Promise<ComprehensiveYearScore[]>
-  getComprehensiveReportYears(): Promise<ComprehensiveReportYears>
-  getComprehensiveReport(options?: { year?: string }): Promise<ComprehensiveReportPage>
   getSchoolGradeYears(): Promise<CodeItem[]>
   getSchoolDepartments(): Promise<CodeItem[]>
   getSchoolMajors(department?: string): Promise<MajorInfo[]>
@@ -950,11 +921,6 @@ export interface ProviderAcademics {
   getSchoolBuildings(campus?: string): Promise<CodeItem[]>
   getSchoolClassrooms(options?: ClassroomQueryOptions): Promise<ClassroomInfo[]>
   getSchoolClassroomSchedule(code: string, options?: ExamQueryOptions): Promise<Course[]>
-  getTrainingPlan(options?: PageQueryOptions): Promise<TrainingPlan[]>
-  getAcademicCompletion(): Promise<AcademicCompletion>
-  /** 请求服务端重新计算学业完成度（写操作），完成后返回最新结果。 */
-  recalculateAcademicCompletion?(): Promise<AcademicCompletion>
-  getAcademicWarnings(): Promise<AcademicWarning[]>
 }
 
 export interface ProviderEvaluation {

@@ -37,8 +37,5 @@
     "dist/types/**/*.ts",
     "dist/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "website"
-  ]
+  "exclude": ["node_modules"]
 }

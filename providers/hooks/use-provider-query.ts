@@ -35,15 +35,12 @@ interface ProviderCachePolicy {
 }
 
 const SHORT_TTL_MS = 1000 * 60 * 60 * 12
-const SIX_HOUR_TTL_MS = 1000 * 60 * 60 * 6
-const ONE_HOUR_TTL_MS = 1000 * 60 * 60
 
 const CACHE_POLICIES: Record<string, ProviderCachePolicy> = {
   "student-info": { ttl: LONG_TTL_MS, persist: true },
   schedule: { ttl: LONG_TTL_MS, persist: true },
   "class-periods": { ttl: LONG_TTL_MS, persist: true },
   "term-calendar": { ttl: LONG_TTL_MS, persist: true },
-  "training-plan": { ttl: LONG_TTL_MS, persist: true },
   "current-week": { ttl: SHORT_TTL_MS, persist: true },
   grades: { ttl: DEFAULT_TTL_MS, persist: true },
   "gpa-stats": { ttl: DEFAULT_TTL_MS, persist: true },
@@ -51,24 +48,6 @@ const CACHE_POLICIES: Record<string, ProviderCachePolicy> = {
   "grade-distribution": { ttl: DEFAULT_TTL_MS, persist: true },
   "grade-ranking": { ttl: DEFAULT_TTL_MS, persist: true },
   exams: { ttl: DEFAULT_TTL_MS, persist: true },
-  "academic-completion": { ttl: DEFAULT_TTL_MS, persist: true },
-  "academic-warnings": { ttl: DEFAULT_TTL_MS, persist: true },
-  "labor-records": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "labor-summary": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "labor-activities": { ttl: ONE_HOUR_TTL_MS, persist: true },
-  "credit-batches": { ttl: DEFAULT_TTL_MS, persist: true },
-  "credit-declarations": { ttl: ONE_HOUR_TTL_MS, persist: true },
-  "credit-records": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "credit-summary": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "credit-competitions": { ttl: DEFAULT_TTL_MS, persist: true },
-  "credit-library-activities": { ttl: DEFAULT_TTL_MS, persist: true },
-  "comprehensive-terms": { ttl: DEFAULT_TTL_MS, persist: true },
-  "comprehensive-result": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "comprehensive-indicators": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "comprehensive-radar": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "comprehensive-year-scores": { ttl: SIX_HOUR_TTL_MS, persist: true },
-  "comprehensive-report-years": { ttl: DEFAULT_TTL_MS, persist: true },
-  "comprehensive-report": { ttl: SIX_HOUR_TTL_MS, persist: true },
 }
 
 function stableStringify(value: unknown): string {

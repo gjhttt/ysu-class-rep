@@ -1,9 +1,36 @@
-import { BadgeInfo, Code2, ExternalLink, ShieldCheck, Store } from "lucide-react"
+"use client"
+
+import { useState } from "react"
+import { BadgeInfo, Code2, ExternalLink, RefreshCw, ShieldCheck, Store } from "lucide-react"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { APP_CONFIG } from "@/lib/app-config"
 import { APP_BUILD, APP_VERSION } from "@/lib/version"
+import { checkForUpdate } from "@/lib/updater"
+import { useUpdateStore } from "@/lib/stores/update"
 
 export function StudyAboutPage() {
+  const [checking, setChecking] = useState(false)
+
+  async function handleCheckUpdate() {
+    setChecking(true)
+    try {
+      const update = await checkForUpdate(false)
+      if (!update.available) {
+        toast.success("当前已是最新版本")
+        return
+      }
+      useUpdateStore.getState().setUpdateInfo(update)
+      useUpdateStore.getState().setUpdateStatus(true)
+      useUpdateStore.getState().setShowDialog(true)
+    } catch {
+      toast.error("检查更新失败，请稍后重试")
+    } finally {
+      setChecking(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <Card>
@@ -15,6 +42,10 @@ export function StudyAboutPage() {
           <p>
             版本 {APP_VERSION} · 构建 {APP_BUILD}
           </p>
+          <Button variant="outline" className="mt-2 w-full" onClick={handleCheckUpdate} disabled={checking}>
+            <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
+            {checking ? "正在检查…" : "检查更新"}
+          </Button>
           <p>面向燕山大学学生的非官方第三方客户端，与燕山大学官方无隶属关系。</p>
           <p>
             主要用于查看本人学籍、成绩、课表和考试等教务信息；仅学生评教支持本人逐题填写、预检并确认提交，不提供自动作答、批量评教、选课、报名或签到功能。
@@ -53,6 +84,7 @@ export function StudyAboutPage() {
           <p>
             开发者不会收集你的学号、密码、Cookie、成绩、排名、课表或考试信息。请只在自己信任的设备上登录，并妥善保管锁屏密码。
           </p>
+          <p>在线公告和版本检查只读取当前项目 GitHub 上的公开文件，不携带账号、Cookie 或教务数据。</p>
           <p>
             必要会话存入 Android
             系统安全存储；展示缓存可在设置中清除，退出登录会一并清除该账号的凭据和缓存。

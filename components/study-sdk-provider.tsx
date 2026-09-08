@@ -9,6 +9,12 @@ import { useSettingsStore } from "@/lib/stores/settings"
 import { useTranslation } from "@/lib/i18n/use-translation"
 import { isCapacitor } from "@/lib/native/platform"
 import { initSafeArea } from "@/lib/native/webview-compat"
+import { checkAnnouncement } from "@/lib/announcement"
+import { checkForUpdate } from "@/lib/updater"
+import { useAnnouncementStore } from "@/lib/stores/announcement"
+import { useUpdateStore } from "@/lib/stores/update"
+import { AnnouncementDialog } from "@/components/announcement-dialog"
+import { UpdateDialog } from "@/components/update-dialog"
 
 export function StudySDKProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation()
@@ -25,6 +31,32 @@ export function StudySDKProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("resize", inject)
     return () => window.removeEventListener("resize", inject)
   }, [])
+
+  useEffect(() => {
+    if (!settingsHydrated || !isCapacitor()) return
+    let cancelled = false
+
+    void Promise.all([
+      checkAnnouncement().catch(() => null),
+      checkForUpdate(true).catch(() => null),
+    ]).then(([announcement, update]) => {
+      if (cancelled) return
+      if (update?.available) {
+        useUpdateStore.getState().setUpdateInfo(update)
+        useUpdateStore.getState().setUpdateStatus(true)
+      }
+      if (announcement) {
+        useAnnouncementStore.getState().setAnnouncementInfo(announcement)
+        useAnnouncementStore.getState().setShowDialog(true)
+      } else if (update?.available) {
+        useUpdateStore.getState().setShowDialog(true)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [settingsHydrated])
 
   useEffect(() => {
     if (!hasHydrated || !settingsHydrated) return
@@ -74,5 +106,17 @@ export function StudySDKProvider({ children }: { children: React.ReactNode }) {
     )
   }
 
-  return children
+  return (
+    <>
+      {children}
+      <AnnouncementDialog
+        onDismissed={() => {
+          if (useUpdateStore.getState().hasUpdate) {
+            useUpdateStore.getState().setShowDialog(true)
+          }
+        }}
+      />
+      <UpdateDialog />
+    </>
+  )
 }

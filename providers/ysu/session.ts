@@ -28,10 +28,8 @@ import { resetScxt } from "./protocol/scxt"
 import { resetXgxt } from "./protocol/xgxt"
 import { useAuthStore } from "@/lib/stores/auth"
 import { initServerConfig } from "@/lib/server-config"
-import { STORAGE_KEYS } from "@/lib/storage/keys"
 import { clearAllCache, cleanStaleCacheVersions } from "@/lib/storage/cache"
 import { useRefreshStore } from "@/lib/stores/refresh"
-import { isCapacitor } from "@/lib/native/platform"
 import { stopNotify } from "@/lib/native/notify"
 import { clearWidgetDataFromNative } from "@/lib/native/widget-bridge"
 import { removeCASTGC } from "@/lib/storage/secure"
@@ -43,15 +41,6 @@ export async function initializeSession(): Promise<void> {
   initServerConfig()
   // 清理因 credential 轮换产生的孤立缓存
   cleanStaleCacheVersions()
-  // OTA 更新后清理旧版本和下载缓存，仅当 updater 设置了标志位时才执行
-  if (
-    localStorage.getItem(STORAGE_KEYS.otaCleanup) ||
-    localStorage.getItem(STORAGE_KEYS.legacyOtaCleanup)
-  ) {
-    localStorage.removeItem(STORAGE_KEYS.otaCleanup)
-    localStorage.removeItem(STORAGE_KEYS.legacyOtaCleanup)
-    cleanOtaArtifacts()
-  }
   // Restore CASTGC to CapacitorHttp system cookie store (for native platforms)
   await restoreCASCookies()
 
@@ -95,49 +84,6 @@ export async function persistMobileSession(): Promise<void> {
   const session = await MobileSession.fromJar(getMobileJar())
   if (!session.isEmpty()) {
     useAuthStore.getState().setMobileSession(session.toJSON())
-  }
-}
-
-/**
- * 清理 OTA 旧版本和下载临时文件。
- * 启动时执行，插件不在工作中，不存在文件句柄竞争。
- */
-async function cleanOtaArtifacts(): Promise<void> {
-  if (!isCapacitor()) return
-
-  // 清理旧 OTA 版本（手动模式下 autoDeletePrevious 不生效）
-  try {
-    const { CapacitorUpdater } = await import("@capgo/capacitor-updater")
-    const [{ bundles }, current] = await Promise.all([
-      CapacitorUpdater.list(),
-      CapacitorUpdater.current(),
-    ])
-    for (const b of bundles) {
-      if (b.id === "builtin" || b.id === current.bundle.id) continue
-      await CapacitorUpdater.delete({ id: b.id }).catch(() => {})
-    }
-  } catch {
-    // 忽略
-  }
-
-  // 清理 OTA 下载缓存
-  try {
-    const { Filesystem, Directory } = await import("@capacitor/filesystem")
-    await Filesystem.rmdir({
-      path: "capgo_downloads",
-      directory: Directory.Cache,
-      recursive: true,
-    })
-  } catch {
-    // 目录不存在或无法删除，忽略
-  }
-
-  // 清理 APK 下载缓存
-  try {
-    const { clearApkCache } = await import("@/lib/updater")
-    await clearApkCache()
-  } catch {
-    // 忽略
   }
 }
 

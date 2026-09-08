@@ -1,30 +1,12 @@
 import type {
   AcademicCapabilities,
-  AcademicCompletion,
   AcademicProvider,
-  AcademicWarning,
   AuthStatus,
   ClassPeriod,
   ClassroomInfo,
   ClassroomQueryOptions,
   CodeItem,
-  ComprehensiveIndicatorDetail,
-  ComprehensiveQueryOptions,
-  ComprehensiveRadarItem,
-  ComprehensiveReportPage,
-  ComprehensiveReportYears,
-  ComprehensiveResult,
-  ComprehensiveTerm,
-  ComprehensiveYearScore,
-  CatalogPage,
-  CatalogQueryOptions,
-  Competition,
   Course,
-  CreditBatch,
-  CreditDeclaration,
-  CreditQueryOptions,
-  CreditRecord,
-  CreditSummary,
   Credential,
   CurrentWeek,
   CurrentWeekQueryOptions,
@@ -47,19 +29,10 @@ import type {
   GradeStatistics,
   LoginStep1Input,
   LoginStep1Result,
-  LaborRecord,
-  LaborSummary,
-  LibraryActivity,
-  EnrollableActivity,
   MajorInfo,
-  MakeupExamBatch,
-  MakeupExamCourse,
-  MakeupExamCourseQueryOptions,
-  MakeupExamSignupInput,
   MfaChallenge,
   MfaRequestInput,
   MfaSubmitInput,
-  PageQueryOptions,
   ProviderDiagnostics,
   ProviderMobile,
   ProviderNativeNotification,
@@ -70,8 +43,6 @@ import type {
   TermCalendar,
   TermCalendarQueryOptions,
   TermQueryOptions,
-  TrainingPlan,
-  UnscheduledCourseQueryOptions,
   WechatMfaContext,
   WechatQrPollResult,
 } from "./types"
@@ -127,38 +98,11 @@ export abstract class BaseProvider implements AcademicProvider {
   abstract getGradeDistribution(options?: GradeAnalyticsQueryOptions): Promise<GradeDistribution[]>
   abstract getGradeRanking(options?: GradeRankingQueryOptions): Promise<GradeRanking>
   abstract getSchedule(options?: ScheduleQueryOptions): Promise<Course[]>
-  abstract getUnscheduledCourses(options?: UnscheduledCourseQueryOptions): Promise<Course[]>
   abstract getClassPeriods(): Promise<ClassPeriod[]>
   abstract getTermCalendar(options?: TermCalendarQueryOptions): Promise<TermCalendar>
   abstract getCurrentWeek(options?: CurrentWeekQueryOptions): Promise<CurrentWeek>
   abstract getCurrentWeekNumber(options?: CurrentWeekQueryOptions): Promise<number>
   abstract getExams(options?: ExamQueryOptions): Promise<Exam[]>
-  abstract getMakeupExamBatches(options?: ExamQueryOptions): Promise<MakeupExamBatch[]>
-  abstract getMakeupExamCourses(options?: MakeupExamCourseQueryOptions): Promise<MakeupExamCourse[]>
-  abstract signupMakeupExam(input: MakeupExamSignupInput): Promise<void>
-  abstract getLaborRecords(): Promise<LaborRecord[]>
-  abstract getLaborSummary(): Promise<LaborSummary>
-  abstract getLaborActivities(): Promise<EnrollableActivity[]>
-  abstract getCreditBatches(): Promise<CreditBatch[]>
-  abstract getCreditDeclarations(options?: CreditQueryOptions): Promise<CreditDeclaration[]>
-  abstract getCreditRecords(options?: CreditQueryOptions): Promise<CreditRecord[]>
-  abstract getAllCreditRecords(): Promise<CreditRecord[]>
-  abstract getCreditSummary(): Promise<CreditSummary>
-  abstract getCreditCompetitions(options?: CatalogQueryOptions): Promise<CatalogPage<Competition>>
-  abstract getCreditLibraryActivities(
-    options?: CatalogQueryOptions
-  ): Promise<CatalogPage<LibraryActivity>>
-  abstract getComprehensiveTerms(): Promise<ComprehensiveTerm[]>
-  abstract getComprehensiveResult(options?: ComprehensiveQueryOptions): Promise<ComprehensiveResult>
-  abstract getComprehensiveIndicators(
-    options?: ComprehensiveQueryOptions
-  ): Promise<ComprehensiveIndicatorDetail[]>
-  abstract getComprehensiveRadar(
-    options?: ComprehensiveQueryOptions
-  ): Promise<ComprehensiveRadarItem[]>
-  abstract getComprehensiveYearScores(): Promise<ComprehensiveYearScore[]>
-  abstract getComprehensiveReportYears(): Promise<ComprehensiveReportYears>
-  abstract getComprehensiveReport(options?: { year?: string }): Promise<ComprehensiveReportPage>
   abstract getSchoolGradeYears(): Promise<CodeItem[]>
   abstract getSchoolDepartments(): Promise<CodeItem[]>
   abstract getSchoolMajors(department?: string): Promise<MajorInfo[]>
@@ -168,9 +112,6 @@ export abstract class BaseProvider implements AcademicProvider {
   abstract getSchoolBuildings(campus?: string): Promise<CodeItem[]>
   abstract getSchoolClassrooms(options?: ClassroomQueryOptions): Promise<ClassroomInfo[]>
   abstract getSchoolClassroomSchedule(code: string, options?: ExamQueryOptions): Promise<Course[]>
-  abstract getTrainingPlan(options?: PageQueryOptions): Promise<TrainingPlan[]>
-  abstract getAcademicCompletion(): Promise<AcademicCompletion>
-  abstract getAcademicWarnings(): Promise<AcademicWarning[]>
   abstract getEvaluationTypes(options?: TermQueryOptions): Promise<EvaluationType[]>
   abstract getPendingEvaluations(
     evalType: string,
