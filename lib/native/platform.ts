@@ -1,13 +1,9 @@
 /** 检测当前是否在 Capacitor 原生环境中运行。 */
 
+import { Capacitor } from "@capacitor/core"
+
 export function isCapacitor(): boolean {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Capacitor } = require("@capacitor/core")
-    return Capacitor.isNativePlatform()
-  } catch {
-    return false
-  }
+  return typeof window !== "undefined" && Capacitor.isNativePlatform()
 }
 
 /** Tablets have a shorter screen edge >= 600 CSS pixels (covers budget tablets). */
