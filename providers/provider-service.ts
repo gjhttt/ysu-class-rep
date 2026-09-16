@@ -6,6 +6,7 @@ import type { AcademicProvider } from "./types"
 import { createProvider, hasProvider } from "./provider-registry"
 import { clearAllCache } from "@/lib/storage/cache"
 import { clearRememberedCredentials } from "@/lib/storage/secure"
+import { clearManualCourses } from "@/lib/storage/manual-courses"
 
 function resolveSupportedSchoolId(schoolId: string): string {
   if (hasSchoolConfig(schoolId) && hasProvider(schoolId)) {
@@ -71,6 +72,7 @@ export async function logoutActiveProvider(): Promise<void> {
   } finally {
     useAuthStore.getState().clearCredential()
     clearAllCache()
+    clearManualCourses()
     await clearRememberedCredentials().catch(() => {})
     activeInitializePromise = null
   }

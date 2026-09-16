@@ -34,6 +34,7 @@ import {
   ChevronRight,
   Search,
   Grid3x2,
+  Plus,
   Grid3x3,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -51,6 +52,10 @@ import { ScheduleMobile } from "./schedule-mobile"
 import { syncExamsToWidget, syncScheduleToWidget } from "@/lib/native/widget-bridge"
 import { syncClassAlarmsToNative } from "@/lib/native/notify"
 import { useSettingsStore } from "@/lib/stores/settings"
+import { useAuthStore } from "@/lib/stores/auth"
+import { loadManualCourses, saveManualCourses } from "@/lib/storage/manual-courses"
+import { ManualCourseDialog } from "./manual-course-dialog"
+import type { Course } from "@/providers/types"
 
 export default function SchedulePage() {
   const { t } = useTranslation()
@@ -58,11 +63,15 @@ export default function SchedulePage() {
   const compactMode = useSettingsStore((s) => s.scheduleCompactMode)
   const setCompactMode = useSettingsStore((s) => s.setScheduleCompactMode)
   const widgetSyncReminderHours = useSettingsStore((s) => s.widgetSyncReminderHours)
+  const username = useAuthStore((s) => s.username)
+  const authHydrated = useAuthStore((s) => s.hasHydrated)
   const [selectedWeek, setSelectedWeek] = useState<number>(0)
   const [term, setTerm] = useState("")
   const [queriedTerm, setQueriedTerm] = useState("")
   const isDefaultTerm = queriedTerm === ""
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [manualDialogOpen, setManualDialogOpen] = useState(false)
+  const [manualCourses, setManualCourses] = useState<Course[]>([])
 
   const scheduleQuery = useSchedule({
     semester: queriedTerm || undefined,
@@ -78,9 +87,35 @@ export default function SchedulePage() {
   const periodsQuery = useClassPeriods()
   const examsQuery = useExams({ semester: queriedTerm || undefined })
 
-  const courses = useMemo(() => scheduleQuery.data ?? [], [scheduleQuery.data])
   const currentWeek = currentWeekQuery.data ?? null
   const termCalendar = termCalendarQuery.data
+  const manualSemester = queriedTerm || currentWeek?.semester || termCalendar?.semester || "current"
+  const manualAccount = username || "local"
+
+  useEffect(() => {
+    if (!authHydrated) return
+    setManualCourses(loadManualCourses(manualAccount, manualSemester))
+  }, [authHydrated, manualAccount, manualSemester])
+
+  const courses = useMemo(
+    () => [...(scheduleQuery.data ?? []), ...manualCourses],
+    [scheduleQuery.data, manualCourses]
+  )
+
+  function addManualCourse(course: Course) {
+    const next = [...manualCourses, course]
+    setManualCourses(next)
+    saveManualCourses(manualAccount, manualSemester, next)
+    toast.success("课程已添加到本机课表")
+  }
+
+  function deleteManualCourse(course: Course) {
+    const id = course.raw?.id
+    const next = manualCourses.filter((item) => item.raw?.id !== id)
+    setManualCourses(next)
+    saveManualCourses(manualAccount, manualSemester, next)
+    toast.success("已删除自定义课程")
+  }
 
   const widgetCurrentWeek = useMemo(
     () => resolveWidgetCurrentWeek(currentWeek, termCalendar?.startDate),
@@ -264,6 +299,15 @@ export default function SchedulePage() {
       >
         {compactMode ? <Grid3x3 className="size-4" /> : <Grid3x2 className="size-4" />}
       </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setManualDialogOpen(true)}
+        className="h-8 w-8"
+        aria-label="添加自定义课程"
+      >
+        <span className="text-lg leading-none">+</span>
+      </Button>
       <FilterTrigger
         label={
           selectedWeek ? t("schedule.weekShort", { week: selectedWeek }) : t("schedule.weekLabel")
@@ -370,6 +414,10 @@ export default function SchedulePage() {
             <CardDescription>{t("schedule.description")}</CardDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <Button variant="outline" onClick={() => setManualDialogOpen(true)}>
+              <Plus data-icon="inline-start" />
+              添加课程
+            </Button>
             <Button variant="outline" asChild>
               <Link href={freeRoomHref}>
                 <CalendarSearch data-icon="inline-start" />
@@ -408,6 +456,7 @@ export default function SchedulePage() {
             onPrevWeek={() => shiftWeek(-1)}
             onNextWeek={() => shiftWeek(1)}
             colorMap={courseColors}
+            onDeleteManualCourse={deleteManualCourse}
           />
         </div>
       ) : (
@@ -423,6 +472,7 @@ export default function SchedulePage() {
               termStartDate={termCalendar?.startDate}
               nowMinutes={nowMinutes}
               colorMap={courseColors}
+              onDeleteManualCourse={deleteManualCourse}
             />
           </CardContent>
         </Card>
@@ -436,6 +486,12 @@ export default function SchedulePage() {
       >
         {renderFilterControls("schedule-drawer")}
       </FilterDrawer>
+      <ManualCourseDialog
+        open={manualDialogOpen}
+        semester={manualSemester}
+        onOpenChange={setManualDialogOpen}
+        onSave={addManualCourse}
+      />
     </div>
   )
 }

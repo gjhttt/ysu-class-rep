@@ -42,6 +42,7 @@ interface Props {
   onNextWeek?: () => void
   /** 提供时替代默认的活动弹窗，用于只读课表（如全校课表） */
   onCourseTap?: (course: Course) => void
+  onDeleteManualCourse?: (course: Course) => void
 }
 
 const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
@@ -64,6 +65,7 @@ export function ScheduleMobile({
   onPrevWeek,
   onNextWeek,
   onCourseTap,
+  onDeleteManualCourse,
 }: Props) {
   const { t } = useTranslation()
   const [overlapDrawer, setOverlapDrawer] = useState<OverlapState>(null)
@@ -445,6 +447,11 @@ export function ScheduleMobile({
         week={selectedWeek}
         open={activityOpen}
         onOpenChange={setActivityOpen}
+        onDelete={
+          activityCourse && onDeleteManualCourse
+            ? () => onDeleteManualCourse(activityCourse)
+            : undefined
+        }
       />
     </>
   )

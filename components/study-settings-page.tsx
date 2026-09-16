@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { clearAllCache } from "@/lib/storage/cache"
 import { logoutActiveProvider } from "@/providers/provider-service"
+import { clearManualCourses } from "@/lib/storage/manual-courses"
 
 export function StudySettingsPage() {
   const router = useRouter()
@@ -62,6 +63,7 @@ export function StudySettingsPage() {
             className="justify-start"
             onClick={() => {
               clearAllCache()
+              clearManualCourses()
               toast.success("展示缓存已清除")
             }}
           >

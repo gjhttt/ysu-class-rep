@@ -10,15 +10,18 @@ import {
 } from "@/components/responsive-modal"
 import { useTranslation } from "@/lib/i18n/use-translation"
 import type { Course } from "@/providers/types"
+import { isManualCourse } from "@/lib/storage/manual-courses"
+import { Button } from "@/components/ui/button"
 
 interface Props {
   course: Course | null
   week: number
   open: boolean
   onOpenChange: (open: boolean) => void
+  onDelete?: () => void
 }
 
-export function ActivityModal({ course, open, onOpenChange }: Props) {
+export function ActivityModal({ course, open, onOpenChange, onDelete }: Props) {
   const { t } = useTranslation()
   const details = [
     [t("schedule.teacher"), course?.teacher],
@@ -56,6 +59,18 @@ export function ActivityModal({ course, open, onOpenChange }: Props) {
               </div>
             ))}
           </dl>
+          {course && isManualCourse(course) && onDelete && (
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={() => {
+                onDelete()
+                onOpenChange(false)
+              }}
+            >
+              删除这门自定义课程
+            </Button>
+          )}
         </ResponsiveModalBody>
       </ResponsiveModalContent>
     </ResponsiveModal>
