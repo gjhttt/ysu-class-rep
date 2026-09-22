@@ -40,6 +40,7 @@ import {
 import { cn } from "@/lib/utils"
 import {
   isCourseActiveInWeek,
+  parseWeeks,
   parseTimeToMinutes,
   periodIsInUse,
   resolveInitialScheduleWeek,
@@ -56,6 +57,14 @@ import { useAuthStore } from "@/lib/stores/auth"
 import { loadManualCourses, saveManualCourses } from "@/lib/storage/manual-courses"
 import { ManualCourseDialog } from "./manual-course-dialog"
 import type { Course } from "@/providers/types"
+import { mergeCourseProfiles } from "@/lib/academic/course-data"
+import {
+  courseEntityId,
+  effectiveCredit,
+  loadGpaPredictorData,
+  saveGpaPredictorData,
+  type CourseProfile,
+} from "@/lib/storage/gpa-predictor"
 
 export default function SchedulePage() {
   const { t } = useTranslation()
@@ -64,6 +73,7 @@ export default function SchedulePage() {
   const setCompactMode = useSettingsStore((s) => s.setScheduleCompactMode)
   const widgetSyncReminderHours = useSettingsStore((s) => s.widgetSyncReminderHours)
   const username = useAuthStore((s) => s.username)
+  const accountScope = useAuthStore((s) => s.cacheNamespace)
   const authHydrated = useAuthStore((s) => s.hasHydrated)
   const [selectedWeek, setSelectedWeek] = useState<number>(0)
   const [term, setTerm] = useState("")
@@ -72,6 +82,7 @@ export default function SchedulePage() {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [manualDialogOpen, setManualDialogOpen] = useState(false)
   const [manualCourses, setManualCourses] = useState<Course[]>([])
+  const [courseProfiles, setCourseProfiles] = useState<Record<string, CourseProfile>>({})
 
   const scheduleQuery = useSchedule({
     semester: queriedTerm || undefined,
@@ -97,10 +108,55 @@ export default function SchedulePage() {
     setManualCourses(loadManualCourses(manualAccount, manualSemester))
   }, [authHydrated, manualAccount, manualSemester])
 
-  const courses = useMemo(
+  const rawCourses = useMemo(
     () => [...(scheduleQuery.data ?? []), ...manualCourses],
     [scheduleQuery.data, manualCourses]
   )
+
+  useEffect(() => {
+    if (!authHydrated || !accountScope || manualSemester === "current") return
+    const stored = loadGpaPredictorData(accountScope)
+    const profiles = mergeCourseProfiles(stored.profiles, [], rawCourses, manualSemester)
+    stored.profiles = profiles
+    saveGpaPredictorData(accountScope, stored)
+    setCourseProfiles(profiles)
+  }, [accountScope, authHydrated, manualSemester, rawCourses])
+
+  const courses = useMemo(() => {
+    const profileCourses: Course[] = Object.values(courseProfiles)
+      .filter(
+        (profile) =>
+          profile.source === "custom" && profile.semester === manualSemester && profile.schedule
+      )
+      .map((profile) => ({
+        name: profile.name,
+        code: profile.courseCode,
+        classId: profile.classId,
+        classroom: profile.schedule!.classroom,
+        teacher: profile.schedule!.teacher,
+        weekDay: profile.schedule!.weekDay,
+        startSection: profile.schedule!.startSection,
+        endSection: profile.schedule!.endSection,
+        weeks: profile.schedule!.weeks,
+        weekList: parseWeeks(profile.schedule!.weeks),
+        credit: String(effectiveCredit(profile) ?? ""),
+        raw: { __profileId: profile.id },
+      }))
+    return [...rawCourses, ...profileCourses].map((course) => {
+      const linkedId =
+        typeof course.raw?.__profileId === "string" ? course.raw.__profileId : undefined
+      const id =
+        linkedId ??
+        courseEntityId({
+          semester: manualSemester,
+          courseCode: course.code,
+          classId: course.classId,
+          manualId: typeof course.raw?.id === "string" ? course.raw.id : undefined,
+        })
+      const credit = id && courseProfiles[id] ? effectiveCredit(courseProfiles[id]) : undefined
+      return credit === undefined ? course : { ...course, credit: String(credit) }
+    })
+  }, [courseProfiles, manualSemester, rawCourses])
 
   function addManualCourse(course: Course) {
     const next = [...manualCourses, course]
@@ -115,6 +171,35 @@ export default function SchedulePage() {
     setManualCourses(next)
     saveManualCourses(manualAccount, manualSemester, next)
     toast.success("已删除自定义课程")
+  }
+
+  function updateCourseCredit(course: Course, overrideCredit?: number) {
+    if (!accountScope) return
+    const linkedId =
+      typeof course.raw?.__profileId === "string" ? course.raw.__profileId : undefined
+    const id =
+      linkedId ??
+      courseEntityId({
+        semester: manualSemester,
+        courseCode: course.code,
+        classId: course.classId,
+        manualId: typeof course.raw?.id === "string" ? course.raw.id : undefined,
+      })
+    if (!id) {
+      toast.error("该课程缺少稳定标识，无法保存学分修正")
+      return
+    }
+    const stored = loadGpaPredictorData(accountScope)
+    const profile = stored.profiles[id]
+    if (!profile) return
+    if (overrideCredit === undefined && profile.originalCredit === undefined) {
+      toast.error("这门本地课程没有教务原始学分")
+      return
+    }
+    stored.profiles[id] = { ...profile, overrideCredit }
+    saveGpaPredictorData(accountScope, stored)
+    setCourseProfiles(stored.profiles)
+    toast.success(overrideCredit === undefined ? "已恢复教务学分" : "学分修正已保存")
   }
 
   const widgetCurrentWeek = useMemo(
@@ -457,6 +542,7 @@ export default function SchedulePage() {
             onNextWeek={() => shiftWeek(1)}
             colorMap={courseColors}
             onDeleteManualCourse={deleteManualCourse}
+            onCourseCreditChange={updateCourseCredit}
           />
         </div>
       ) : (
@@ -473,6 +559,7 @@ export default function SchedulePage() {
               nowMinutes={nowMinutes}
               colorMap={courseColors}
               onDeleteManualCourse={deleteManualCourse}
+              onCourseCreditChange={updateCourseCredit}
             />
           </CardContent>
         </Card>

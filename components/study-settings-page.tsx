@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { clearAllCache } from "@/lib/storage/cache"
 import { logoutActiveProvider } from "@/providers/provider-service"
 import { clearManualCourses } from "@/lib/storage/manual-courses"
+import { clearGpaPredictorData } from "@/lib/storage/gpa-predictor"
 
 export function StudySettingsPage() {
   const router = useRouter()
@@ -64,6 +65,7 @@ export function StudySettingsPage() {
             onClick={() => {
               clearAllCache()
               clearManualCourses()
+              clearGpaPredictorData()
               toast.success("展示缓存已清除")
             }}
           >

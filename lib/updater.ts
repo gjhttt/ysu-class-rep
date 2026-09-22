@@ -43,10 +43,7 @@ function normalizeVersion(version: string): string | null {
   return valid(withoutPrefix) ?? clean(withoutPrefix) ?? null
 }
 
-export function releaseToUpdateInfo(
-  release: GitHubRelease,
-  currentVersion: string
-): UpdateInfo {
+export function releaseToUpdateInfo(release: GitHubRelease, currentVersion: string): UpdateInfo {
   if (release.draft || release.prerelease) return EMPTY_UPDATE
   const current = normalizeVersion(currentVersion)
   const target = normalizeVersion(release.tag_name ?? "")
@@ -92,6 +89,7 @@ export async function checkForUpdate(auto = false): Promise<UpdateInfo> {
 interface YsuFilePlugin {
   downloadApk(options: { url: string; fileName?: string }): Promise<{ path: string }>
   installApk(options: { path: string }): Promise<void>
+  ensureInstallPermission(): Promise<{ allowed: boolean }>
   addListener(
     eventName: "downloadProgress",
     listener: (state: { percent: number }) => void
@@ -122,7 +120,10 @@ export async function downloadApkInApp(
   }
 }
 
-export async function installDownloadedApk(): Promise<void> {
+export async function installDownloadedApk(): Promise<"launched" | "permission-required"> {
   if (!downloadedApkPath) throw new Error("No APK downloaded")
+  const permission = await YsuFile.ensureInstallPermission()
+  if (!permission.allowed) return "permission-required"
   await YsuFile.installApk({ path: downloadedApkPath })
+  return "launched"
 }

@@ -23,11 +23,13 @@ export function UpdateDialog() {
   const setShowDialog = useUpdateStore((state) => state.setShowDialog)
   const [state, setState] = useState<DialogState>("idle")
   const [progress, setProgress] = useState(0)
+  const [permissionHint, setPermissionHint] = useState(false)
 
   const close = useCallback(() => {
     setShowDialog(false)
     setState("idle")
     setProgress(0)
+    setPermissionHint(false)
   }, [setShowDialog])
 
   const download = useCallback(async () => {
@@ -45,8 +47,13 @@ export function UpdateDialog() {
   const install = useCallback(async () => {
     setState("installing")
     try {
-      await installDownloadedApk()
-      close()
+      const result = await installDownloadedApk()
+      if (result === "permission-required") {
+        setPermissionHint(true)
+        setState("downloaded")
+      } else {
+        close()
+      }
     } catch {
       setState("error")
     }
@@ -90,15 +97,30 @@ export function UpdateDialog() {
             )}
           </div>
         )}
+        {permissionHint && (
+          <p className="rounded-lg bg-muted p-3 text-sm">
+            请在刚打开的系统页面允许“安装未知应用”，返回后再次点击安装。
+          </p>
+        )}
         <DialogFooter>
-          <Button variant="outline" onClick={close} disabled={state === "downloading" || state === "installing"}>
+          <Button
+            variant="outline"
+            onClick={close}
+            disabled={state === "downloading" || state === "installing"}
+          >
             稍后再说
           </Button>
           <Button
             onClick={state === "downloaded" ? install : download}
             disabled={state === "downloading" || state === "installing"}
           >
-            {state === "downloaded" ? "打开系统安装器" : state === "installing" ? "正在打开…" : "下载更新"}
+            {state === "downloaded"
+              ? permissionHint
+                ? "授权后重试安装"
+                : "打开系统安装器"
+              : state === "installing"
+                ? "正在打开…"
+                : "下载更新"}
           </Button>
         </DialogFooter>
       </DialogContent>

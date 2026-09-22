@@ -43,6 +43,7 @@ interface Props {
   /** 提供时替代默认的活动弹窗，用于只读课表（如全校课表） */
   onCourseTap?: (course: Course) => void
   onDeleteManualCourse?: (course: Course) => void
+  onCourseCreditChange?: (course: Course, credit?: number) => void
 }
 
 const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
@@ -61,6 +62,7 @@ export function ScheduleTablet({
   nowMinutes,
   onCourseTap,
   onDeleteManualCourse,
+  onCourseCreditChange,
 }: Props) {
   const { t } = useTranslation()
   const [overlapDialog, setOverlapDialog] = useState<{
@@ -406,6 +408,7 @@ export function ScheduleTablet({
             ? () => onDeleteManualCourse(activityCourse)
             : undefined
         }
+        onCreditChange={onCourseCreditChange}
       />
     </>
   )

@@ -5,7 +5,8 @@ export function numericGradeValue(
   fallback?: string
 ): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value
-  const parsed = Number(fallback)
+  if (!fallback?.trim()) return undefined
+  const parsed = Number(fallback.trim())
   return Number.isFinite(parsed) ? parsed : undefined
 }
 

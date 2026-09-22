@@ -62,6 +62,7 @@ const MAX_SIDEBAR_WIDTH = 384 // 24rem
 const READ_ONLY_PATHS = new Set([
   "/dashboard",
   "/dashboard/grades",
+  "/dashboard/grades/predictor",
   "/dashboard/schedule",
   "/dashboard/school-schedule",
   "/dashboard/exams",
@@ -216,6 +217,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const titleByPath: Record<string, string> = {
     "/dashboard": t("app.overview"),
     "/dashboard/grades": t("app.grades"),
+    "/dashboard/grades/predictor": "绩点预测",
     "/dashboard/schedule": t("app.schedule"),
     "/dashboard/school-schedule": t("app.schoolSchedule"),
     "/dashboard/exams": t("app.exams"),

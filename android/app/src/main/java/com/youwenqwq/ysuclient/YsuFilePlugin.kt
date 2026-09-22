@@ -1,6 +1,9 @@
 package com.youwenqwq.ysuclient
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -89,6 +92,21 @@ class YsuFilePlugin : Plugin() {
                 conn?.disconnect()
             }
         }.start()
+    }
+
+    @PluginMethod
+    fun ensureInstallPermission(call: PluginCall) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()) {
+            call.resolve(JSObject().put("allowed", true))
+            return
+        }
+
+        val intent = Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${context.packageName}")
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        call.resolve(JSObject().put("allowed", false))
     }
 
     @PluginMethod

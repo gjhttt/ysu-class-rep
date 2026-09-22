@@ -2,6 +2,7 @@
 
 import { ResponsiveSelect } from "@/components/responsive-select"
 import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -27,7 +28,7 @@ import { GpaSummary } from "./gpa-summary"
 import { useCurrentWeek, useGPAStats, useGrades } from "@/providers/hooks"
 import { useProvider } from "@/providers/use-provider"
 import type { Grade, GradeStatistics, GradeDistribution, GradeRanking } from "@/providers/types"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Calculator } from "lucide-react"
 import {
   calculateTermWeightedGpa,
   numericGradeValue,
@@ -160,6 +161,11 @@ export default function GradesPage() {
 
   useMobileHeaderRight(
     <div className="flex items-center gap-0.5">
+      <Button variant="ghost" size="icon-sm" asChild aria-label="绩点预测">
+        <Link href="/dashboard/grades/predictor">
+          <Calculator className="size-4" />
+        </Link>
+      </Button>
       <Button
         variant="ghost"
         size="icon-sm"
@@ -276,9 +282,17 @@ export default function GradesPage() {
       <GpaSummary gpa={gpa.data} termWeightedGpa={termWeightedGpa} />
 
       <Card className="hidden md:block">
-        <CardHeader>
-          <CardTitle>{t("grades.title")}</CardTitle>
-          <CardDescription>{t("grades.description")}</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between">
+          <div>
+            <CardTitle>{t("grades.title")}</CardTitle>
+            <CardDescription>{t("grades.description")}</CardDescription>
+          </div>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/grades/predictor">
+              <Calculator />
+              绩点预测
+            </Link>
+          </Button>
         </CardHeader>
         <CardContent>{renderFilterControls("grades-desktop")}</CardContent>
       </Card>

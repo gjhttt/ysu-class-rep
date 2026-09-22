@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import {
   ResponsiveModal,
@@ -19,10 +20,15 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   onDelete?: () => void
+  onCreditChange?: (course: Course, credit?: number) => void
 }
 
-export function ActivityModal({ course, open, onOpenChange, onDelete }: Props) {
+export function ActivityModal({ course, open, onOpenChange, onDelete, onCreditChange }: Props) {
   const { t } = useTranslation()
+  const [credit, setCredit] = useState("")
+  useEffect(() => {
+    if (open) setCredit(course?.credit ?? "")
+  }, [course, open])
   const details = [
     [t("schedule.teacher"), course?.teacher],
     [t("schedule.classroom"), course?.classroom],
@@ -59,6 +65,39 @@ export function ActivityModal({ course, open, onOpenChange, onDelete }: Props) {
               </div>
             ))}
           </dl>
+          {course && onCreditChange && (
+            <div className="space-y-2 rounded-xl border p-3">
+              <label className="text-xs text-muted-foreground" htmlFor="schedule-course-credit">
+                本地修正学分（同步用于绩点预测）
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="schedule-course-credit"
+                  type="number"
+                  min="0.1"
+                  step="0.5"
+                  value={credit}
+                  onChange={(event) => setCredit(event.target.value)}
+                  className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-3"
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const value = Number(credit)
+                    if (Number.isFinite(value) && value > 0) onCreditChange(course, value)
+                  }}
+                >
+                  保存
+                </Button>
+                <Button type="button" variant="outline" onClick={() => onCreditChange(course)}>
+                  还原
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                仅修改本机显示和预测，不回写教务系统。
+              </p>
+            </div>
+          )}
           {course && isManualCourse(course) && onDelete && (
             <Button
               variant="destructive"

@@ -39,6 +39,9 @@ describe("grade display calculations", () => {
 
   it("uses the normalized number before the display fallback", () => {
     expect(numericGradeValue(88, "95")).toBe(88)
+    expect(numericGradeValue(undefined, "")).toBeUndefined()
+    expect(numericGradeValue(undefined, "   ")).toBeUndefined()
+    expect(numericGradeValue(undefined, "0")).toBe(0)
     expect(numericGradeValue(undefined, "优秀")).toBeUndefined()
   })
 })

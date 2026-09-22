@@ -7,6 +7,7 @@ import { createProvider, hasProvider } from "./provider-registry"
 import { clearAllCache } from "@/lib/storage/cache"
 import { clearRememberedCredentials } from "@/lib/storage/secure"
 import { clearManualCourses } from "@/lib/storage/manual-courses"
+import { clearGpaPredictorData } from "@/lib/storage/gpa-predictor"
 
 function resolveSupportedSchoolId(schoolId: string): string {
   if (hasSchoolConfig(schoolId) && hasProvider(schoolId)) {
@@ -73,6 +74,7 @@ export async function logoutActiveProvider(): Promise<void> {
     useAuthStore.getState().clearCredential()
     clearAllCache()
     clearManualCourses()
+    clearGpaPredictorData()
     await clearRememberedCredentials().catch(() => {})
     activeInitializePromise = null
   }
